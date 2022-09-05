@@ -3,8 +3,14 @@ use std::fs;
 use std::io;
 use std::io::Write;
 
+#[derive(Debug)]
+enum Error {
+    SyntaxError { line: usize, position: usize },
+}
+
 #[allow(dead_code)]
 #[derive(Debug)]
+#[rustfmt::skip]
 enum TokenType {
   // Single-character tokens.
   Leftparen, RightParen, LeftBrace, RightBrace,
@@ -28,19 +34,20 @@ enum TokenType {
 
 #[derive(Debug)]
 struct Token {
-    token_type: TokenType
+    token_type: TokenType,
 }
 
-fn scan_tokens(source: &String) -> Vec<Token> {
+fn scan_tokens(source: &String) -> Result<Vec<Token>, Error> {
     let tokens = Vec::new();
 
-    return tokens;
+    return Ok(tokens);
 }
 
-fn run(source: String) {
-    let tokens = scan_tokens(&source);
+fn run(source: String) -> Result<(), Error> {
+    let tokens = scan_tokens(&source)?;
     println!("code: {}", source);
     println!("tokens: {:?}", tokens);
+    Ok(())
 }
 
 fn main() {
@@ -53,7 +60,12 @@ fn main() {
             io::stdout().flush().unwrap();
 
             while let Ok(_) = io::stdin().read_line(&mut line) {
-                run(line.clone());
+                match run(line.clone()) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        println!("Error: {:?}", e);
+                    }
+                }
                 print!(" >> ");
                 line.clear();
                 io::stdout().flush().unwrap();
@@ -62,7 +74,12 @@ fn main() {
         2 => {
             let code = fs::read_to_string(args.get(1).unwrap()).unwrap();
 
-            run(code);
+            match run(code.clone()) {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("Error: {:?}", e);
+                }
+            }
         }
         _ => {
             println!("usage: rlox");
