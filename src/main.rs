@@ -1,44 +1,69 @@
+mod scanner;
+
 use std::env;
 use std::fs;
 use std::io;
 use std::io::Write;
 
 #[derive(Debug)]
-enum Error {
-    SyntaxError { line: usize, position: usize },
+pub enum Error {
+    SyntaxError {
+        line: usize,
+        position: usize,
+        message: String,
+    },
 }
 
 #[allow(dead_code)]
 #[derive(Debug)]
 #[rustfmt::skip]
-enum TokenType {
-  // Single-character tokens.
-  Leftparen, RightParen, LeftBrace, RightBrace,
-  Comma, Dot, Minus, Plus, Semicolon, Slash, Star,
+pub enum TokenType {
+    // Single-character tokens.
+    LeftParen, RightParen, LeftBrace, RightBrace,
+    Comma, Dot, Minus, Plus, Semicolon, Slash, Star,
 
-  // One or two character tokens.
-  Bang, BangEqual,
-  Equal, EqualEqual,
-  Greater, GreaterEqual,
-  Less, LessEqual,
+    // One or two character tokens.
+    Bang, BangEqual,
+    Equal, EqualEqual,
+    Greater, GreaterEqual,
+    Less, LessEqual,
 
-  // Literals.
-  Identifier, String, Number,
+    // Literals.
+    Identifier(String), String(String), Number(f64),
 
-  // Keywords.
-  And, Class, Else, False, Fun, For, If, Nil, Or,
-  Print, Return, Super, This, True, Var, While,
+    // Keywords.
+    And, Class, Else, False, Fun, For, If, Nil, Or,
+    Print, Return, Super, This, True, Var, While,
 
-  Eof
+    // Comments.
+    LineComment,
+
+    Eof
 }
 
 #[derive(Debug)]
-struct Token {
+pub struct Token {
     token_type: TokenType,
+    lexeme: String,
+    line: usize,
+    position: usize,
 }
 
 fn scan_tokens(source: &String) -> Result<Vec<Token>, Error> {
-    let tokens = Vec::new();
+    let mut tokens = Vec::new();
+
+    let mut slice_handle = source.as_str();
+    let mut current = 0usize;
+    let mut line_number = 1usize;
+    let mut line_position = 1usize;
+
+    while slice_handle.len() > 1 {
+        let (token, characters_skipped) =
+            scanner::from_slice(slice_handle, &mut line_number, &mut line_position)?;
+        tokens.push(token);
+        current += characters_skipped;
+        slice_handle = &source[current..];
+    }
 
     return Ok(tokens);
 }
