@@ -34,7 +34,11 @@ pub fn from_slice(
         [b'A'..=b'Z' | b'a'..=b'z' | b'_', ..] => {
             let s = find_identifier(source);
 
-            (TokenType::Identifier(String::from(s)), s.len())
+            if let Some(token_type) = crate::tokens::parse_keyword(s) {
+                (token_type, s.len())
+            } else {
+                (TokenType::Identifier(String::from(s)), s.len())
+            }
         }
         [b'"', ..] => {
             if let Ok(s) = find_string_literal(source) {

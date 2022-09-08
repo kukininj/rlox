@@ -1,4 +1,7 @@
 mod scanner;
+mod tokens;
+
+use tokens::*;
 
 use std::env;
 use std::fs;
@@ -14,40 +17,6 @@ pub enum Error {
     },
 }
 
-#[allow(dead_code)]
-#[derive(Debug)]
-#[rustfmt::skip]
-pub enum TokenType {
-    // Single-character tokens.
-    LeftParen, RightParen, LeftBrace, RightBrace,
-    Comma, Dot, Minus, Plus, Semicolon, Slash, Star,
-
-    // One or two character tokens.
-    Bang, BangEqual,
-    Equal, EqualEqual,
-    Greater, GreaterEqual,
-    Less, LessEqual,
-
-    // Literals.
-    Identifier(String), String(String), Number(f64),
-
-    // Keywords.
-    And, Class, Else, False, Fun, For, If, Nil, Or,
-    Print, Return, Super, This, True, Var, While,
-
-    // Comments.
-    LineComment,
-
-    Eof
-}
-
-#[derive(Debug)]
-pub struct Token {
-    token_type: TokenType,
-    lexeme: String,
-    line: usize,
-    position: usize,
-}
 
 fn scan_tokens(source: &String) -> Result<Vec<Token>, Error> {
     let mut tokens = Vec::new();
