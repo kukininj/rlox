@@ -1,22 +1,16 @@
+mod expression;
 mod scanner;
 mod tokens;
+mod parser;
+mod error;
 
+use error::*;
 use tokens::*;
 
 use std::env;
 use std::fs;
 use std::io;
 use std::io::Write;
-
-#[derive(Debug)]
-pub enum Error {
-    SyntaxError {
-        line: usize,
-        position: usize,
-        message: String,
-    },
-}
-
 
 fn scan_tokens(source: &String) -> Result<Vec<Token>, Error> {
     let mut tokens = Vec::new();
@@ -39,8 +33,9 @@ fn scan_tokens(source: &String) -> Result<Vec<Token>, Error> {
 
 fn run(source: String) -> Result<(), Error> {
     let tokens = scan_tokens(&source)?;
-    println!("code: {}", source);
-    println!("tokens: {:?}", tokens);
+    println!("tokens: {:#?}", tokens);
+    let tree = parser::parse(tokens);
+    println!("tree: {:#?}", tree);
     Ok(())
 }
 

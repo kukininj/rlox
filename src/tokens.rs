@@ -21,13 +21,17 @@ pub enum TokenType {
     And, Class, Else, False, Fun, For, If, Nil, Or,
     Print, Return, Super, This, True, Var, While,
 
-    // Comments.
-    LineComment,
-
     Eof
 }
 
-#[derive(Debug)]
+impl TokenType {
+    pub fn variant_eq(a: &Self, b: &Self) -> bool {
+        std::mem::discriminant(a) == std::mem::discriminant(b)
+    }
+}
+
+/// These tokens do not store enouhg information 
+#[derive(Debug, Clone)]
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
