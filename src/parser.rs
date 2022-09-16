@@ -12,13 +12,20 @@ impl Parser {
         self.tokens.get(self.current_index)
     }
 
-    fn advance(&mut self) {
+    fn advance(&mut self) -> Result<(), Error> {
+        if self.check(&TokenType::Eof) {
+            return Err(Error::ParsingError {
+                line: self.line,
+                position: self.position,
+                message: String::from("Tried to advance after Eof"),
+            });
+        }
+        self.current_index += 1;
         let current = self.current_token().unwrap();
         (self.line, self.position) = (current.line, current.position);
-        self.current_index += 1;
+        Ok(())
     }
 
-    /// Checks current_token.token_type and token_type match
     fn check(&self, token_type: &TokenType) -> bool {
         if let Some(token) = self.current_token() {
             TokenType::variant_eq(token_type, &token.token_type)
@@ -31,7 +38,6 @@ impl Parser {
         for t in types {
             if self.check(t) {
                 let t = self.current_token().unwrap().clone();
-                self.advance();
                 return Some(t);
             }
         }
@@ -40,13 +46,13 @@ impl Parser {
 
     fn consume(&mut self, t: TokenType) -> Result<(), Error> {
         if self.check(&t) {
-            self.advance();
+            self.advance()?;
             Ok(())
         } else {
             Err(Error::ParsingError {
                 line: self.line,
                 position: self.position,
-                message: format!("Expected {:?}", t),
+                message: format!("Expected {:?}, found: {:?}", t, self.current_token()),
             })
         }
     }
@@ -61,6 +67,7 @@ impl Parser {
         while let Some(operator) =
             self.match_token_type(&[TokenType::BangEqual, TokenType::EqualEqual])
         {
+            self.advance()?;
             let right = self.comparison()?;
             expr = Expression::from(Binary {
                 left: expr,
@@ -81,6 +88,7 @@ impl Parser {
             TokenType::Less,
             TokenType::LessEqual,
         ]) {
+            self.advance()?;
             let right = self.comparison()?;
             expr = Expression::from(Binary {
                 left: expr,
@@ -96,6 +104,7 @@ impl Parser {
         let mut expr = self.factor()?;
 
         while let Some(operator) = self.match_token_type(&[TokenType::Minus, TokenType::Plus]) {
+            self.advance()?;
             let right = self.comparison()?;
             expr = Expression::from(Binary {
                 left: expr,
@@ -111,6 +120,7 @@ impl Parser {
         let mut expr = self.unary()?;
 
         while let Some(operator) = self.match_token_type(&[TokenType::Slash, TokenType::Star]) {
+            self.advance()?;
             let right = self.comparison()?;
             expr = Expression::from(Binary {
                 left: expr,
@@ -124,6 +134,7 @@ impl Parser {
 
     fn unary(&mut self) -> Result<Expression, Error> {
         if let Some(operator) = self.match_token_type(&[TokenType::Bang, TokenType::Minus]) {
+            self.advance()?;
             let right = self.unary()?;
             Ok(Expression::from(Unary {
                 operator: UnaryOperator::new(operator)?,
@@ -137,7 +148,7 @@ impl Parser {
     fn primary(&mut self) -> Result<Expression, Error> {
         if let Some(pat) = self.current_token() {
             let token = pat.clone();
-            self.current_index += 1;
+            self.advance()?;
             return match token.token_type {
                 TokenType::False => Ok(Expression::from(Literal {
                     value: LiteralValue::new(token)?,
@@ -162,14 +173,14 @@ impl Parser {
                 _ => Err(Error::ParsingError {
                     line: self.line,
                     position: self.position,
-                    message: String::from("Expected primary"),
+                    message: format!("Unexpected token \"{}\", expected primary", token.lexeme),
                 }),
             };
         } else {
             Err(Error::ParsingError {
                 line: self.line,
                 position: self.position,
-                message: String::from("Expected Token"),
+                message: String::from("Expected Token at"),
             })
         }
     }

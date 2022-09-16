@@ -24,5 +24,5 @@ pub enum Error {
         line: usize,
         position: usize,
         message: String,
-    }
+    },
 }

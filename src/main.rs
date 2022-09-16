@@ -1,8 +1,8 @@
+mod error;
 mod expression;
+mod parser;
 mod scanner;
 mod tokens;
-mod parser;
-mod error;
 
 use error::*;
 use tokens::*;
@@ -27,6 +27,13 @@ fn scan_tokens(source: &String) -> Result<Vec<Token>, Error> {
         current += characters_skipped;
         slice_handle = &source[current..];
     }
+
+    tokens.push(Token {
+        token_type: TokenType::Eof,
+        lexeme: String::from(""),
+        line: line_number,
+        position: line_position + 1,
+    });
 
     return Ok(tokens);
 }

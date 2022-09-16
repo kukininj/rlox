@@ -48,7 +48,7 @@ pub fn from_slice(
                 return Err(Error::SyntaxError {
                     line,
                     position,
-                    message: String::from("Error whiile building a string."),
+                    message: String::from("Error while building a string."),
                 });
             }
         }
@@ -68,7 +68,7 @@ pub fn from_slice(
                 return Err(Error::SyntaxError {
                     line,
                     position,
-                    message: String::from("Error whiile building a numeric."),
+                    message: String::from("Error while building a numeric."),
                 });
             }
         }
