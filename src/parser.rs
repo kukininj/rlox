@@ -62,25 +62,25 @@ impl Parser {
     }
 
     fn equality(&mut self) -> Result<Expression, Error> {
-        let mut expr = self.comparison()?;
+        let mut left = self.comparison()?;
 
         while let Some(operator) =
             self.match_token_type(&[TokenType::BangEqual, TokenType::EqualEqual])
         {
             self.advance()?;
             let right = self.comparison()?;
-            expr = Expression::from(Binary {
-                left: expr,
+            left = Expression::from(Binary {
+                left,
                 operator: BinaryOperator::new(operator)?,
                 right,
             });
         }
 
-        Ok(expr)
+        Ok(left)
     }
 
     fn comparison(&mut self) -> Result<Expression, Error> {
-        let mut expr = self.term()?;
+        let mut left = self.term()?;
 
         while let Some(operator) = self.match_token_type(&[
             TokenType::Greater,
@@ -89,47 +89,47 @@ impl Parser {
             TokenType::LessEqual,
         ]) {
             self.advance()?;
-            let right = self.comparison()?;
-            expr = Expression::from(Binary {
-                left: expr,
+            let right = self.term()?;
+            left = Expression::from(Binary {
+                left,
                 operator: BinaryOperator::new(operator)?,
                 right,
             });
         }
 
-        Ok(expr)
+        Ok(left)
     }
 
     fn term(&mut self) -> Result<Expression, Error> {
-        let mut expr = self.factor()?;
+        let mut left = self.factor()?;
 
         while let Some(operator) = self.match_token_type(&[TokenType::Minus, TokenType::Plus]) {
             self.advance()?;
-            let right = self.comparison()?;
-            expr = Expression::from(Binary {
-                left: expr,
+            let right = self.factor()?;
+            left = Expression::from(Binary {
+                left,
                 operator: BinaryOperator::new(operator)?,
                 right,
             });
         }
 
-        Ok(expr)
+        Ok(left)
     }
 
     fn factor(&mut self) -> Result<Expression, Error> {
-        let mut expr = self.unary()?;
+        let mut left = self.unary()?;
 
         while let Some(operator) = self.match_token_type(&[TokenType::Slash, TokenType::Star]) {
             self.advance()?;
-            let right = self.comparison()?;
-            expr = Expression::from(Binary {
-                left: expr,
+            let right = self.unary()?;
+            left = Expression::from(Binary {
+                left,
                 operator: BinaryOperator::new(operator)?,
                 right,
             });
         }
 
-        Ok(expr)
+        Ok(left)
     }
 
     fn unary(&mut self) -> Result<Expression, Error> {
