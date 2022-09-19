@@ -1,5 +1,7 @@
 mod error;
 mod expression;
+mod interpreter;
+mod lox_object;
 mod parser;
 mod scanner;
 mod tokens;
@@ -41,8 +43,12 @@ fn scan_tokens(source: &String) -> Result<Vec<Token>, Error> {
 fn run(source: String) -> Result<(), Error> {
     let tokens = scan_tokens(&source)?;
     println!("tokens: {:#?}", tokens);
-    let tree = parser::parse(tokens);
+    let tree = parser::parse(tokens)?;
     println!("tree: {:#?}", tree);
+    let mut interpreter = interpreter::Interpreter::new();
+    let result = interpreter.evaluate(tree);
+    println!("result: {:#?}", result);
+
     Ok(())
 }
 
