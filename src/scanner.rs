@@ -123,7 +123,7 @@ fn find_numeric(source: &str) -> Result<&str, ()> {
             }
         }
     }
-    Err(())
+    Ok(&source[0..len])
 }
 
 fn skip_whitespace_characters(source: &str, line: &mut usize, position: &mut usize) -> usize {
