@@ -5,7 +5,8 @@ use crate::expression::Grouping;
 use crate::expression::LiteralValue;
 use crate::expression::Unary;
 use crate::expression::UnaryOperator;
-use crate::lox_object::LoxValue;
+use crate::lox_object::LoxObject;
+use crate::lox_value::LoxValue;
 
 pub struct Interpreter {}
 
@@ -28,9 +29,9 @@ impl Interpreter {
 
         match binary.operator {
             BinaryOperator::Add(_) => LoxValue::add(left, right),
-            BinaryOperator::Subtract(_) => todo!(),
-            BinaryOperator::Multiply(_) => todo!(),
-            BinaryOperator::Divide(_) => todo!(),
+            BinaryOperator::Subtract(_) => LoxValue::subtract(left, right),
+            BinaryOperator::Multiply(_) => LoxValue::multiply(left, right),
+            BinaryOperator::Divide(_) => LoxValue::divide(left, right),
             BinaryOperator::Equal(_) => todo!(),
             BinaryOperator::NotEqual(_) => todo!(),
             BinaryOperator::Less(_) => todo!(),
