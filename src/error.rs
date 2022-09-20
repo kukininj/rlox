@@ -25,4 +25,12 @@ pub enum Error {
         position: usize,
         message: String,
     },
+    InternalRuntimeError {
+        message: String,
+    },
+    RuntimeError {
+        line: usize,
+        position: usize,
+        message: String,
+    },
 }
