@@ -56,15 +56,15 @@ impl Interpreter {
             BinaryOperator::Subtract(debug) => {
                 self.set_debug(debug);
                 LoxValue::subtract(left, right)
-            },
+            }
             BinaryOperator::Multiply(debug) => {
                 self.set_debug(debug);
                 LoxValue::multiply(left, right)
-            },
+            }
             BinaryOperator::Divide(debug) => {
                 self.set_debug(debug);
                 LoxValue::divide(left, right)
-            },
+            }
             BinaryOperator::Equal(_) => todo!(),
             BinaryOperator::NotEqual(_) => todo!(),
             BinaryOperator::Less(_) => todo!(),
@@ -97,4 +97,37 @@ impl Interpreter {
             UnaryOperator::Not(_) => todo!(),
         }
     }
+}
+
+#[test]
+fn runtime_error_string_negation() {
+    use crate::parser;
+    use crate::scanner;
+    let source = "-\"asdf\"".to_string();
+    let tokens = scanner::scan_tokens(&source).unwrap();
+    let tree = parser::parse(tokens).unwrap();
+    let mut interp = Interpreter::new();
+    if let Error::RuntimeError {
+        line,
+        position,
+        message,
+    } = interp.evaluate(tree).unwrap_err()
+    {
+        assert_eq!(line, 1);
+        assert_eq!(position, 1);
+        assert_eq!(message, "Cannot negate: String(\"asdf\")");
+    };
+}
+
+#[test]
+fn basic_arithmetics() {
+    use crate::parser;
+    use crate::scanner;
+    let source = "2 + 2 * 2 / (3-2) * 1".to_string();
+    let tokens = scanner::scan_tokens(&source).unwrap();
+    let tree = parser::parse(tokens).unwrap();
+    let mut interp = Interpreter::new();
+    if let LoxValue::Number(n) = interp.evaluate(tree).unwrap() {
+        assert_eq!(n, 6.);
+    };
 }
