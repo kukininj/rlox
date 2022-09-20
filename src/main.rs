@@ -2,6 +2,7 @@ mod error;
 mod expression;
 mod interpreter;
 mod lox_object;
+mod lox_value;
 mod parser;
 mod scanner;
 mod tokens;
@@ -14,37 +15,13 @@ use std::fs;
 use std::io;
 use std::io::Write;
 
-fn scan_tokens(source: &String) -> Result<Vec<Token>, Error> {
-    let mut tokens = Vec::new();
-
-    let mut slice_handle = source.as_str();
-    let mut current = 0usize;
-    let mut line_number = 1usize;
-    let mut line_position = 1usize;
-
-    while slice_handle.len() > 1 {
-        let (token, characters_skipped) =
-            scanner::from_slice(slice_handle, &mut line_number, &mut line_position)?;
-        tokens.push(token);
-        current += characters_skipped;
-        slice_handle = &source[current..];
-    }
-
-    tokens.push(Token {
-        token_type: TokenType::Eof,
-        lexeme: String::from(""),
-        line: line_number,
-        position: line_position + 1,
-    });
-
-    return Ok(tokens);
-}
+use crate::lox_value::LoxValue;
 
 fn run(source: String) -> Result<(), Error> {
-    let tokens = scan_tokens(&source)?;
-    println!("tokens: {:#?}", tokens);
+    let tokens = scanner::scan_tokens(&source)?;
+    // println!("tokens: {:#?}", tokens);
     let tree = parser::parse(tokens)?;
-    println!("tree: {:#?}", tree);
+    // println!("tree: {:#?}", tree);
     let mut interpreter = interpreter::Interpreter::new();
     let result = interpreter.evaluate(tree);
     println!("result: {:#?}", result);
@@ -60,14 +37,24 @@ fn main() {
             let mut line = String::new();
             print!(" >> ");
             io::stdout().flush().unwrap();
+            let mut interpreter = interpreter::Interpreter::new();
 
             while let Ok(_) = io::stdin().read_line(&mut line) {
-                match run(line.clone()) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        println!("Error: {:?}", e);
+                match scanner::scan_tokens(&line) {
+                    Ok(tokens) => match parser::parse(tokens) {
+                        Ok(tree) => {
+                            let result = interpreter.evaluate(tree);
+                            println!("{:?}", result);
+                        }
+                        Err(error) => {
+                            println!("{:?}", error);
+                        }
+                    },
+                    Err(error) => {
+                        println!("{:?}", error);
                     }
-                }
+                };
+
                 print!(" >> ");
                 line.clear();
                 io::stdout().flush().unwrap();

@@ -189,3 +189,28 @@ fn find_identifier(source: &str) -> &str {
     &source[0..len]
 }
 
+pub fn scan_tokens(source: &String) -> Result<Vec<Token>, Error> {
+    let mut tokens = Vec::new();
+
+    let mut slice_handle = source.as_str();
+    let mut current = 0usize;
+    let mut line_number = 1usize;
+    let mut line_position = 1usize;
+
+    while slice_handle.len() > 1 {
+        let (token, characters_skipped) =
+            from_slice(slice_handle, &mut line_number, &mut line_position)?;
+        tokens.push(token);
+        current += characters_skipped;
+        slice_handle = &source[current..];
+    }
+
+    tokens.push(Token {
+        token_type: TokenType::Eof,
+        lexeme: String::from(""),
+        line: line_number,
+        position: line_position + 1,
+    });
+
+    return Ok(tokens);
+}
