@@ -65,12 +65,30 @@ impl Interpreter {
                 self.set_debug(debug);
                 LoxValue::divide(left, right)
             }
-            BinaryOperator::Equal(_) => todo!(),
-            BinaryOperator::NotEqual(_) => todo!(),
-            BinaryOperator::Less(_) => todo!(),
-            BinaryOperator::LessEqual(_) => todo!(),
-            BinaryOperator::Greater(_) => todo!(),
-            BinaryOperator::GreaterEqual(_) => todo!(),
+            BinaryOperator::Equal(debug) => {
+                self.set_debug(debug);
+                LoxValue::equal(left, right)
+            }
+            BinaryOperator::NotEqual(debug) => {
+                self.set_debug(debug);
+                LoxValue::not_equal(left, right)
+            }
+            BinaryOperator::Less(debug) => {
+                self.set_debug(debug);
+                LoxValue::less(left, right)
+            }
+            BinaryOperator::LessEqual(debug) => {
+                self.set_debug(debug);
+                LoxValue::less_equal(left, right)
+            }
+            BinaryOperator::Greater(debug) => {
+                self.set_debug(debug);
+                LoxValue::greater(left, right)
+            }
+            BinaryOperator::GreaterEqual(debug) => {
+                self.set_debug(debug);
+                LoxValue::greater_equal(left, right)
+            }
         }
     }
 
@@ -94,7 +112,11 @@ impl Interpreter {
                 self.set_debug(debug);
                 LoxValue::negative(right)
             }
-            UnaryOperator::Not(_) => todo!(),
+            UnaryOperator::Not(debug) => {
+                self.set_debug(debug);
+                let b = LoxValue::is_truthy(right);
+                Ok(LoxValue::Bool(!b))
+            }
         }
     }
 }

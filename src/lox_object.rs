@@ -9,3 +9,9 @@ pub struct LoxObject(Rc<RefCell<LoxObjectData>>);
 struct LoxObjectData {
     class: String,
 }
+
+impl PartialEq for LoxObject {
+    fn eq(&self, other: &Self) -> bool {
+        todo!()
+    }
+}
