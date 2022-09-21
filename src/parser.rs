@@ -1,3 +1,4 @@
+use crate::statement::*;
 use crate::{error::Error, expression::*, Token, TokenType};
 
 struct Parser {
@@ -55,6 +56,39 @@ impl Parser {
                 message: format!("Expected {:?}, found: {:?}", t, self.current_token()),
             })
         }
+    }
+
+    fn statement(&mut self) -> Result<Statement, Error> {
+        if self.check(&TokenType::Print) {
+            self.print_statement()
+        } else {
+            self.expression_statement()
+        }
+    }
+
+    fn expression_statement(&mut self) -> Result<Statement, Error> {
+        let expr = self.expression()?;
+        self.consume(TokenType::Semicolon).or_else(|_| {
+            Err(Error::ParsingError {
+                line: self.line,
+                position: self.position,
+                message: "Expected ';' after expression".to_string(),
+            })
+        })?;
+        Ok(Statement::Expression(expr))
+    }
+
+    fn print_statement(&mut self) -> Result<Statement, Error> {
+        self.consume(TokenType::Print)?;
+        let expr = self.expression()?;
+        self.consume(TokenType::Semicolon).or_else(|_| {
+            Err(Error::ParsingError {
+                line: self.line,
+                position: self.position,
+                message: "Expected ';' after value".to_string(),
+            })
+        })?;
+        Ok(Statement::Print(expr))
     }
 
     fn expression(&mut self) -> Result<Expression, Error> {
@@ -184,9 +218,14 @@ impl Parser {
             })
         }
     }
+
+    pub fn is_at_end(self: &Self) -> bool {
+        self.check(&TokenType::Eof)
+    }
 }
 
-pub fn parse(tokens: Vec<Token>) -> Result<Expression, Error> {
+pub fn parse(tokens: Vec<Token>) -> Result<Vec<Statement>, Error> {
+    let mut program = Vec::new();
     let mut parser = Parser {
         tokens,
         current_index: 0,
@@ -194,7 +233,11 @@ pub fn parse(tokens: Vec<Token>) -> Result<Expression, Error> {
         position: 0,
     };
 
-    parser.expression()
+    while !parser.is_at_end() {
+        program.push(parser.statement()?);
+    }
+
+    Ok(program)
 }
 
 #[test]
@@ -220,6 +263,7 @@ fn test_parser() {
         debug_token!(TokenType::Minus, 8),
         debug_token!(TokenType::Number(4.), 9),
         debug_token!(TokenType::Semicolon, 10),
+        debug_token!(TokenType::Eof, 11),
     ];
 
     let expr = parse(tokens).unwrap();
@@ -232,6 +276,7 @@ fn test_parser() {
         debug_token!(TokenType::Minus, 4),
         debug_token!(TokenType::Number(4.), 5),
         debug_token!(TokenType::Semicolon, 6),
+        debug_token!(TokenType::Eof, 7),
     ];
 
     let _ = parse(tokens).unwrap_err();

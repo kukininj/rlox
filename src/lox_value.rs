@@ -133,7 +133,7 @@ fn comparison_tests() {
         let tokens = scanner::scan_tokens(&source.to_string()).unwrap();
         let tree = parser::parse(tokens).unwrap();
         let mut interp = Interpreter::new();
-        if let LoxValue::Bool(n) = interp.evaluate(tree).unwrap() {
+        if let LoxValue::Bool(n) = interp.run(tree).unwrap() {
             assert_eq!(n, expected);
         };
     }

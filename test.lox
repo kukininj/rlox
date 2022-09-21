@@ -1,4 +1,6 @@
-1234.5
-var language = "lox" // asdf
-var language = "lox" // asdf
-var boolean = 1 - (2 * 3) < -4 == false
+1234.5;
+1234.5 == 1234.5;
+"asdf";
+// var language = "lox"; // asdf
+// var language = "lox"; // asdf
+// var boolean = 1 - (2 * 3) < -4 == false;

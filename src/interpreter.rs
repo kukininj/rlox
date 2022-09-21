@@ -8,6 +8,7 @@ use crate::expression::LiteralValue;
 use crate::expression::Unary;
 use crate::expression::UnaryOperator;
 use crate::lox_value::LoxValue;
+use crate::statement::Statement;
 
 pub struct Interpreter {
     line: usize,
@@ -26,6 +27,23 @@ impl Interpreter {
         self.line = debug.line;
         self.position = debug.position;
     }
+
+    pub fn run(self: &mut Self, statements: Vec<Statement>) -> Result<LoxValue, Error> {
+        let mut last = LoxValue::Nil;
+        for stmt in statements {
+            match stmt {
+                Statement::Expression(expr) => {
+                    last = self.evaluate(expr)?;
+                }
+                Statement::Print(expr) => {
+                    last = self.evaluate(expr)?;
+                    println!("{}", last);
+                },
+            };
+        }
+        Ok(last)
+    }
+
     pub fn evaluate(self: &mut Self, expr: Expression) -> Result<LoxValue, Error> {
         let result = match expr {
             Expression::Binary(binary) => self.visit_binary(binary),
@@ -126,7 +144,7 @@ impl Interpreter {
 fn runtime_error_string_negation() {
     use crate::parser;
     use crate::scanner;
-    let source = "-\"asdf\"".to_string();
+    let source = "-\"asdf\";".to_string();
     let tokens = scanner::scan_tokens(&source).unwrap();
     let tree = parser::parse(tokens).unwrap();
     let mut interp = Interpreter::new();
@@ -134,7 +152,7 @@ fn runtime_error_string_negation() {
         line,
         position,
         message,
-    } = interp.evaluate(tree).unwrap_err()
+    } = interp.run(tree).unwrap_err()
     {
         assert_eq!(line, 1);
         assert_eq!(position, 1);
@@ -146,11 +164,11 @@ fn runtime_error_string_negation() {
 fn basic_arithmetics() {
     use crate::parser;
     use crate::scanner;
-    let source = "2 + 2 * 2 / (3-2) * 1".to_string();
+    let source = "2 + 2 * 2 / (3-2) * 1;".to_string();
     let tokens = scanner::scan_tokens(&source).unwrap();
     let tree = parser::parse(tokens).unwrap();
     let mut interp = Interpreter::new();
-    if let LoxValue::Number(n) = interp.evaluate(tree).unwrap() {
+    if let LoxValue::Number(n) = interp.run(tree).unwrap() {
         assert_eq!(n, 6.);
     };
 }

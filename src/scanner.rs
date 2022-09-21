@@ -42,7 +42,7 @@ pub fn from_slice(
         }
         [b'"', ..] => {
             if let Ok(s) = find_string_literal(source) {
-                println!("s: {}", s);
+                // println!("s: {}", s);
                 (TokenType::String(String::from(s)), s.len() + 2)
             } else {
                 return Err(Error::SyntaxError {
@@ -138,7 +138,6 @@ fn skip_whitespace_characters(source: &str, line: &mut usize, position: &mut usi
                     // comment at the end of the source code
                     handle.len(),
                 );
-                println!("comment len: {}", i);
                 *position = i;
                 handle = &handle[i..];
                 characters_skipped += i;
@@ -197,7 +196,7 @@ pub fn scan_tokens(source: &String) -> Result<Vec<Token>, Error> {
     let mut line_number = 1usize;
     let mut line_position = 1usize;
 
-    while slice_handle.len() > 1 {
+    while slice_handle.len() > 0 {
         let (token, characters_skipped) =
             from_slice(slice_handle, &mut line_number, &mut line_position)?;
         tokens.push(token);

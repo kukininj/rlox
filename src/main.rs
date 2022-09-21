@@ -5,6 +5,7 @@ mod lox_object;
 mod lox_value;
 mod parser;
 mod scanner;
+mod statement;
 mod tokens;
 
 use error::*;
@@ -15,15 +16,13 @@ use std::fs;
 use std::io;
 use std::io::Write;
 
-use crate::lox_value::LoxValue;
-
 fn run(source: String) -> Result<(), Error> {
     let tokens = scanner::scan_tokens(&source)?;
     // println!("tokens: {:#?}", tokens);
     let tree = parser::parse(tokens)?;
     // println!("tree: {:#?}", tree);
     let mut interpreter = interpreter::Interpreter::new();
-    let result = interpreter.evaluate(tree);
+    let result = interpreter.run(tree);
     println!("result: {:#?}", result);
 
     Ok(())
@@ -43,7 +42,7 @@ fn main() {
                 match scanner::scan_tokens(&line) {
                     Ok(tokens) => match parser::parse(tokens) {
                         Ok(tree) => {
-                            let result = interpreter.evaluate(tree);
+                            let result = interpreter.run(tree);
                             println!("{:?}", result);
                         }
                         Err(error) => {
