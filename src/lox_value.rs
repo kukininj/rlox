@@ -6,7 +6,7 @@ pub enum LoxValue {
     Bool(bool),
     String(String),
     Object(LoxObject),
-    Null,
+    Nil,
 }
 
 impl LoxValue {
@@ -106,7 +106,7 @@ impl LoxValue {
     pub fn is_truthy(value: LoxValue) -> bool {
         match value {
             LoxValue::Bool(b) => b,
-            LoxValue::Null => false,
+            LoxValue::Nil => false,
             _ => true,
         }
     }

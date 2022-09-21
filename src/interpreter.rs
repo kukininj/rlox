@@ -102,6 +102,7 @@ impl Interpreter {
             LiteralValue::Number(n, _) => LoxValue::Number(n),
             LiteralValue::True(_) => LoxValue::Bool(true),
             LiteralValue::False(_) => LoxValue::Bool(false),
+            LiteralValue::Nil(_) => LoxValue::Nil,
         }
     }
 

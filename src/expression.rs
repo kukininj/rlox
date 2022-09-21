@@ -71,6 +71,7 @@ pub enum LiteralValue {
     Number(f64, DebugInfo),
     True(DebugInfo),
     False(DebugInfo),
+    Nil(DebugInfo),
 }
 
 impl LiteralValue {
@@ -80,6 +81,7 @@ impl LiteralValue {
             TokenType::String(ref s) => Ok(Self::String(s.clone(), DebugInfo::from(token))),
             TokenType::True => Ok(Self::True(DebugInfo::from(token))),
             TokenType::False => Ok(Self::False(DebugInfo::from(token))),
+            TokenType::Nil => Ok(Self::Nil(DebugInfo::from(token))),
             _ => Err(Error::UnknownLiteral {
                 line: token.line,
                 position: token.position,
