@@ -38,7 +38,10 @@ impl Interpreter {
                 Statement::Print(expr) => {
                     last = self.evaluate(expr)?;
                     println!("{}", last);
-                },
+                }
+                Statement::Variable { name, initializer } => {
+                    unimplemented!("Statement::Variable not implemented")
+                }
             };
         }
         Ok(last)
@@ -50,6 +53,7 @@ impl Interpreter {
             Expression::Grouping(grouping) => self.visit_grouping(grouping),
             Expression::Literal(literal) => Ok(self.visit_literal(literal.value)),
             Expression::Unary(unary) => self.visit_unary(unary),
+            Expression::Identifier(_) => unimplemented!(),
         };
         match result {
             Ok(value) => Ok(value),

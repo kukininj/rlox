@@ -123,11 +123,28 @@ pub struct Unary {
 }
 
 #[derive(Debug)]
+pub struct Identifier(String, DebugInfo);
+
+impl Identifier {
+    pub fn new(token: Token) -> Result<Identifier, Error> {
+        match &token.token_type {
+            TokenType::Identifier(name) => Ok(Self(name.clone(), DebugInfo::from(token))),
+            _ => Err(Error::ParsingError {
+                line: token.line,
+                position: token.position,
+                message: format!("Expected identifier token, found {:?}", token),
+            }),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum Expression {
     Binary(Box<Binary>),
     Grouping(Box<Grouping>),
     Literal(Box<Literal>),
     Unary(Box<Unary>),
+    Identifier(Box<Identifier>),
 }
 
 impl From<Binary> for Expression {
@@ -151,6 +168,12 @@ impl From<Literal> for Expression {
 impl From<Unary> for Expression {
     fn from(g: Unary) -> Self {
         return Self::Unary(Box::new(g));
+    }
+}
+
+impl From<Identifier> for Expression {
+    fn from(i: Identifier) -> Self {
+        return Self::Identifier(Box::new(i));
     }
 }
 
@@ -190,7 +213,8 @@ fn expression_test() {
             lexeme: String::new(),
             line: 0,
             position: 0,
-        }).unwrap(),
+        })
+        .unwrap(),
         right: e,
     });
 

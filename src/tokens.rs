@@ -30,7 +30,7 @@ impl TokenType {
     }
 }
 
-/// These tokens do not store enouhg information 
+/// These tokens do not store enouhg information
 #[derive(Debug, Clone)]
 pub struct Token {
     pub token_type: TokenType,

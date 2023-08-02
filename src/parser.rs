@@ -1,4 +1,5 @@
-use crate::statement::*;
+use crate::scanner;
+use crate::statement::Statement;
 use crate::{error::Error, expression::*, Token, TokenType};
 
 struct Parser {
@@ -55,6 +56,44 @@ impl Parser {
                 position: self.position,
                 message: format!("Expected {:?}, found: {:?}", t, self.current_token()),
             })
+        }
+    }
+
+    fn declaration(&mut self) -> Result<Statement, Error> {
+        if self.check(&TokenType::Var) {
+            self.consume(TokenType::Var)?;
+            self.variable_declaration()
+        } else {
+            self.statement()
+        }
+    }
+
+    fn variable_declaration(&mut self) -> Result<Statement, Error> {
+        match self.current_token() {
+            Some(Token {
+                token_type: TokenType::Identifier(identifier),
+                ..
+            }) => {
+                let identifier = identifier.clone();
+                self.advance()?;
+
+                let mut initializer = None;
+                if self.check(&TokenType::Equal) {
+                    self.advance()?;
+                    initializer = Some(self.expression()?);
+                }
+                self.consume(TokenType::Semicolon)?;
+
+                Ok(Statement::Variable {
+                    name: identifier,
+                    initializer,
+                })
+            }
+            _ => Err(Error::ParsingError {
+                line: self.line,
+                position: self.position,
+                message: String::from("Expected variable name"),
+            }),
         }
     }
 
@@ -199,6 +238,7 @@ impl Parser {
                 TokenType::String(_) => Ok(Expression::from(Literal {
                     value: LiteralValue::new(token)?,
                 })),
+                TokenType::Identifier(_) => Ok(Expression::from(Identifier::new(token)?)),
                 TokenType::LeftParen => {
                     let e = self.expression()?;
                     self.consume(TokenType::RightParen)?;
@@ -222,6 +262,26 @@ impl Parser {
     pub fn is_at_end(self: &Self) -> bool {
         self.check(&TokenType::Eof)
     }
+
+    pub fn synchronize(&mut self) {
+        while let Ok(_) = self.advance() {
+            if let Some(_) = self.match_token_type(&[
+                TokenType::Class,
+                TokenType::Fun,
+                TokenType::Var,
+                TokenType::For,
+                TokenType::If,
+                TokenType::While,
+                TokenType::Print,
+                TokenType::Return,
+            ]) {
+                return;
+            };
+            if let Ok(_) = self.consume(TokenType::Semicolon) {
+                return;
+            }
+        }
+    }
 }
 
 pub fn parse(tokens: Vec<Token>) -> Result<Vec<Statement>, Error> {
@@ -232,12 +292,49 @@ pub fn parse(tokens: Vec<Token>) -> Result<Vec<Statement>, Error> {
         line: 0,
         position: 0,
     };
+    let mut failed = None;
 
     while !parser.is_at_end() {
-        program.push(parser.statement()?);
+        match parser.declaration() {
+            Ok(statement) => {
+                program.push(statement);
+            }
+            Err(error) => {
+                println!("Encountered Error while parsing: {:?}", error);
+                if failed.is_none() {
+                    failed = Some(error);
+                }
+                parser.synchronize();
+            }
+        }
     }
 
-    Ok(program)
+    if let Some(error) = failed {
+        Err(error)
+    } else {
+        Ok(program)
+    }
+}
+
+#[test]
+fn test_statements() {
+    let expr = "
+        1+1;
+    ";
+    let prnt = "
+        print 1;
+    ";
+    let varb = "
+        var a = 1;
+    ";
+
+    let expr = scanner::scan_tokens(&expr.to_string());
+    let prnt = scanner::scan_tokens(&prnt.to_string());
+    let varb = scanner::scan_tokens(&varb.to_string());
+
+    let _expr = parse(expr.unwrap()).unwrap();
+    let _prnt = parse(prnt.unwrap()).unwrap();
+    let _varb = parse(varb.unwrap()).unwrap();
 }
 
 #[test]
