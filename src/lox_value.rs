@@ -9,6 +9,18 @@ pub enum LoxValue {
     Nil,
 }
 
+impl core::fmt::Display for LoxValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LoxValue::Number(n) => write!(f, "{}", n),
+            LoxValue::Bool(b) => write!(f, "{}", b),
+            LoxValue::String(s) => write!(f, "{}", s),
+            LoxValue::Object(o) => write!(f, "{}", o.to_string()),
+            LoxValue::Nil => write!(f, "nil"),
+        }
+    }
+}
+
 impl LoxValue {
     pub fn add(left: LoxValue, right: LoxValue) -> Result<LoxValue, Error> {
         match (left, right) {

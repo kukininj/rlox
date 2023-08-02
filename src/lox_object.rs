@@ -1,13 +1,18 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-
 #[derive(Debug)]
 pub struct LoxObject(Rc<RefCell<LoxObjectData>>);
 
 #[derive(Debug)]
 struct LoxObjectData {
     class: String,
+}
+
+impl LoxObject {
+    pub fn to_string(&self) -> String {
+        todo!()
+    }
 }
 
 impl PartialEq for LoxObject {
