@@ -1,6 +1,6 @@
 use crate::{error::Error, lox_object::LoxObject};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum LoxValue {
     Number(f64),
     Bool(bool),

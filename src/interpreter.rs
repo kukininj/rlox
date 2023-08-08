@@ -1,9 +1,11 @@
+use crate::environment::Environment;
 use crate::error::Error;
 use crate::expression::Binary;
 use crate::expression::BinaryOperator;
 use crate::expression::DebugInfo;
 use crate::expression::Expression;
 use crate::expression::Grouping;
+use crate::expression::Identifier;
 use crate::expression::LiteralValue;
 use crate::expression::Unary;
 use crate::expression::UnaryOperator;
@@ -13,6 +15,7 @@ use crate::statement::Statement;
 pub struct Interpreter {
     line: usize,
     position: usize,
+    environment: Environment,
 }
 
 impl Interpreter {
@@ -20,6 +23,7 @@ impl Interpreter {
         Interpreter {
             line: 0,
             position: 0,
+            environment: Environment::new(),
         }
     }
 
@@ -39,8 +43,18 @@ impl Interpreter {
                     last = self.evaluate(expr)?;
                     println!("{}", last);
                 }
-                Statement::Variable { name, initializer } => {
-                    unimplemented!("Statement::Variable not implemented")
+                Statement::Variable {
+                    name,
+                    initializer: Some(initializer),
+                } => {
+                    last = self.evaluate(initializer)?;
+                    self.environment.define(name, last.clone())?;
+                }
+                Statement::Variable {
+                    name,
+                    initializer: None,
+                } => {
+                    self.environment.define(name, LoxValue::Nil)?;
                 }
             };
         }
@@ -53,7 +67,7 @@ impl Interpreter {
             Expression::Grouping(grouping) => self.visit_grouping(grouping),
             Expression::Literal(literal) => Ok(self.visit_literal(literal.value)),
             Expression::Unary(unary) => self.visit_unary(unary),
-            Expression::Identifier(_) => unimplemented!(),
+            Expression::Identifier(identifier) => self.visit_identifier(identifier),
         };
         match result {
             Ok(value) => Ok(value),
@@ -141,6 +155,10 @@ impl Interpreter {
                 Ok(LoxValue::Bool(!b))
             }
         }
+    }
+
+    fn visit_identifier(self: &mut Self, identifier: Box<Identifier>) -> Result<LoxValue, Error> {
+        self.environment.get(*identifier)
     }
 }
 

@@ -72,9 +72,14 @@ impl Parser {
         match self.current_token() {
             Some(Token {
                 token_type: TokenType::Identifier(identifier),
-                ..
+                lexeme,
+                line,
+                position,
             }) => {
-                let identifier = identifier.clone();
+                let name = identifier.clone();
+                let line = *line;
+                let position = *position;
+                let lexeme = lexeme.clone();
                 self.advance()?;
 
                 let mut initializer = None;
@@ -85,7 +90,14 @@ impl Parser {
                 self.consume(TokenType::Semicolon)?;
 
                 Ok(Statement::Variable {
-                    name: identifier,
+                    name: Identifier(
+                        name,
+                        DebugInfo {
+                            line,
+                            position,
+                            lexeme,
+                        },
+                    ),
                     initializer,
                 })
             }

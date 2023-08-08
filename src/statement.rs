@@ -1,11 +1,11 @@
-use crate::expression::Expression;
+use crate::expression::{Expression, Identifier};
 
 #[derive(Debug)]
 pub enum Statement {
     Expression(Expression),
     Print(Expression),
     Variable {
-        name: String,
+        name: Identifier,
         initializer: Option<Expression>,
     },
 }

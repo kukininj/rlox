@@ -123,7 +123,7 @@ pub struct Unary {
 }
 
 #[derive(Debug)]
-pub struct Identifier(String, DebugInfo);
+pub struct Identifier(pub String, pub DebugInfo);
 
 impl Identifier {
     pub fn new(token: Token) -> Result<Identifier, Error> {
@@ -220,5 +220,5 @@ fn expression_test() {
 
     let grouping = Expression::from(Grouping { expression: unary });
 
-    println!("{:#?}", grouping);
+    eprintln!("{:#?}", grouping);
 }
