@@ -53,4 +53,23 @@ impl Environment {
             })
         }
     }
+
+    pub fn assign(&mut self, target: &Identifier, value: LoxValue) -> Result<LoxValue, Error> {
+        let Identifier(name, DebugInfo { line, position, .. }) = target;
+        let line = *line;
+        let position = *position;
+
+        if self.values.contains_key(name) {}
+
+        if let Some(variable) = self.values.get_mut(name) {
+            variable.value = value.clone();
+            return Ok(value);
+        }
+
+        Err(Error::RuntimeError {
+            line,
+            position,
+            message: format!("Variable {name} not defined!"),
+        })
+    }
 }

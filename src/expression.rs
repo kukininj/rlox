@@ -139,12 +139,19 @@ impl Identifier {
 }
 
 #[derive(Debug)]
+pub struct Assignment {
+    pub target: Identifier,
+    pub value: Expression,
+}
+
+#[derive(Debug)]
 pub enum Expression {
     Binary(Box<Binary>),
     Grouping(Box<Grouping>),
     Literal(Box<Literal>),
     Unary(Box<Unary>),
     Identifier(Box<Identifier>),
+    Assignment(Box<Assignment>),
 }
 
 impl From<Binary> for Expression {
@@ -174,6 +181,12 @@ impl From<Unary> for Expression {
 impl From<Identifier> for Expression {
     fn from(i: Identifier) -> Self {
         return Self::Identifier(Box::new(i));
+    }
+}
+
+impl From<Assignment> for Expression {
+    fn from(i: Assignment) -> Self {
+        return Self::Assignment(Box::new(i));
     }
 }
 

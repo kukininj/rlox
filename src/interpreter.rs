@@ -68,6 +68,9 @@ impl Interpreter {
             Expression::Literal(literal) => Ok(self.visit_literal(literal.value)),
             Expression::Unary(unary) => self.visit_unary(unary),
             Expression::Identifier(identifier) => self.visit_identifier(identifier),
+            Expression::Assignment(assignment) => {
+                self.visit_assignment(&assignment.target, assignment.value)
+            }
         };
         match result {
             Ok(value) => Ok(value),
@@ -159,6 +162,15 @@ impl Interpreter {
 
     fn visit_identifier(self: &mut Self, identifier: Box<Identifier>) -> Result<LoxValue, Error> {
         self.environment.get(*identifier)
+    }
+
+    fn visit_assignment(
+        self: &mut Self,
+        target: &Identifier,
+        value: Expression,
+    ) -> Result<LoxValue, Error> {
+        let value = self.evaluate(value)?;
+        self.environment.assign(target, value)
     }
 }
 

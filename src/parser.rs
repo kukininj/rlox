@@ -143,7 +143,28 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Result<Expression, Error> {
-        self.equality()
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> Result<Expression, Error> {
+        let expr = self.equality()?;
+
+        if self.check(&TokenType::Equal) {
+            self.advance()?;
+            let value = self.assignment()?;
+            match expr {
+                Expression::Identifier(target) => {
+                    return Ok(Expression::from(Assignment {
+                        target: *target,
+                        value,
+                    }));
+                }
+                _ => {
+                    todo!()
+                }
+            }
+        }
+        Ok(expr)
     }
 
     fn equality(&mut self) -> Result<Expression, Error> {
