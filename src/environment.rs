@@ -9,13 +9,13 @@ pub struct Variable {
     defined_at: DebugInfo,
 }
 
-pub struct Environment {
+pub struct Frame {
     values: HashMap<String, Variable>,
 }
 
-impl Environment {
-    pub fn new() -> Environment {
-        Environment {
+impl Frame {
+    pub fn new() -> Frame {
+        Frame {
             values: HashMap::new(),
         }
     }
@@ -24,11 +24,15 @@ impl Environment {
         Identifier(name, debug): Identifier,
         value: LoxValue,
     ) -> Result<(), Error> {
-        if self.values.contains_key(&name) {
+        if let Some(Variable {
+            defined_at: DebugInfo { line, position, .. },
+            ..
+        }) = self.values.get(&name)
+        {
             Err(Error::RuntimeError {
                 line: debug.line,
                 position: debug.position,
-                message: format!("Variable {name} already declared!"),
+                message: format!("Variable {name} already declared at {line}:{position}!"),
             })
         } else {
             self.values.insert(

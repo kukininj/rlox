@@ -1,4 +1,4 @@
-use crate::environment::Environment;
+use crate::environment::Frame;
 use crate::error::Error;
 use crate::expression::Binary;
 use crate::expression::BinaryOperator;
@@ -15,7 +15,7 @@ use crate::statement::Statement;
 pub struct Interpreter {
     line: usize,
     position: usize,
-    environment: Environment,
+    environment: Frame,
 }
 
 impl Interpreter {
@@ -23,7 +23,7 @@ impl Interpreter {
         Interpreter {
             line: 0,
             position: 0,
-            environment: Environment::new(),
+            environment: Frame::new(),
         }
     }
 
