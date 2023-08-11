@@ -9,16 +9,26 @@ pub struct Variable {
     defined_at: DebugInfo,
 }
 
-pub struct Frame {
-    values: HashMap<String, Variable>,
+pub struct Environment {
+    stack: Vec<Frame>,
 }
 
-impl Frame {
-    pub fn new() -> Frame {
-        Frame {
-            values: HashMap::new(),
+pub struct Frame {
+    pub values: HashMap<String, Variable>,
+}
+
+impl Environment {
+    pub fn new() -> Self {
+        Environment {
+            stack: vec![Frame::new()],
         }
     }
+
+    pub fn head(&mut self) -> &mut Frame {
+        let index = self.stack.len() - 1;
+        self.stack.get_mut(index).unwrap()
+    }
+
     pub fn define(
         &mut self,
         Identifier(name, debug): Identifier,
@@ -27,15 +37,16 @@ impl Frame {
         if let Some(Variable {
             defined_at: DebugInfo { line, position, .. },
             ..
-        }) = self.values.get(&name)
+        }) = self.head().values.get(&name)
         {
+            // TODO: dont use `name` here, Variable should store its identifier
             Err(Error::RuntimeError {
                 line: debug.line,
                 position: debug.position,
                 message: format!("Variable {name} already declared at {line}:{position}!"),
             })
         } else {
-            self.values.insert(
+            self.head().values.insert(
                 name,
                 Variable {
                     value,
@@ -46,34 +57,44 @@ impl Frame {
         }
     }
 
-    pub fn get(&self, Identifier(name, debug): Identifier) -> Result<LoxValue, Error> {
-        if let Some(Variable { value, .. }) = self.values.get(&name) {
-            Ok(value.clone())
-        } else {
-            Err(Error::RuntimeError {
-                line: debug.line,
-                position: debug.position,
-                message: format!("Variable {name} not defined!"),
-            })
+    pub fn get(&self, identifier: &Identifier) -> Result<LoxValue, Error> {
+        for frame in self.stack.iter().rev() {
+            if let Some(value) = frame.values.get(&identifier.0).map(|v| v.value.clone()) {
+                return Ok(value);
+            }
         }
+        let Identifier(name, DebugInfo { line, position, .. }) = identifier;
+        Err(Error::RuntimeError {
+            line: *line,
+            position: *position,
+            message: format!("Variable {name} not defined!"),
+        })
     }
 
     pub fn assign(&mut self, target: &Identifier, value: LoxValue) -> Result<LoxValue, Error> {
-        let Identifier(name, DebugInfo { line, position, .. }) = target;
-        let line = *line;
-        let position = *position;
-
-        if self.values.contains_key(name) {}
-
-        if let Some(variable) = self.values.get_mut(name) {
-            variable.value = value.clone();
-            return Ok(value);
+        if let Some(target) = self
+            .stack
+            .iter_mut()
+            .rev()
+            .find_map(|frame| frame.values.get_mut(&target.0))
+        {
+            target.value = value.clone();
+            Ok(value)
+        } else {
+            let Identifier(name, DebugInfo { line, position, .. }) = target;
+            Err(Error::RuntimeError {
+                line: *line,
+                position: *position,
+                message: format!("Variable {name} already declared at {line}:{position}!"),
+            })
         }
+    }
+}
 
-        Err(Error::RuntimeError {
-            line,
-            position,
-            message: format!("Variable {name} not defined!"),
-        })
+impl Frame {
+    pub fn new() -> Frame {
+        Frame {
+            values: HashMap::new(),
+        }
     }
 }

@@ -1,3 +1,4 @@
+use crate::environment::Environment;
 use crate::environment::Frame;
 use crate::error::Error;
 use crate::expression::Binary;
@@ -15,7 +16,7 @@ use crate::statement::Statement;
 pub struct Interpreter {
     line: usize,
     position: usize,
-    environment: Frame,
+    environment: Environment,
 }
 
 impl Interpreter {
@@ -23,7 +24,7 @@ impl Interpreter {
         Interpreter {
             line: 0,
             position: 0,
-            environment: Frame::new(),
+            environment: Environment::new(),
         }
     }
 
@@ -161,7 +162,7 @@ impl Interpreter {
     }
 
     fn visit_identifier(self: &mut Self, identifier: Box<Identifier>) -> Result<LoxValue, Error> {
-        self.environment.get(*identifier)
+        self.environment.get(identifier.as_ref())
     }
 
     fn visit_assignment(
