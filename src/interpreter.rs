@@ -57,6 +57,11 @@ impl Interpreter {
                 } => {
                     self.environment.define(name, LoxValue::Nil)?;
                 }
+                Statement::Block { statements } => {
+                    self.environment.push();
+                    self.run(statements)?;
+                    self.environment.pop();
+                }
             };
         }
         Ok(last)

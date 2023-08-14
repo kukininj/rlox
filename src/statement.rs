@@ -8,4 +8,7 @@ pub enum Statement {
         name: Identifier,
         initializer: Option<Expression>,
     },
+    Block {
+        statements: Vec<Statement>,
+    },
 }

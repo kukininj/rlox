@@ -1,4 +1,3 @@
-use crate::scanner;
 use crate::statement::Statement;
 use crate::{error::Error, expression::*, Token, TokenType};
 
@@ -110,10 +109,16 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Result<Statement, Error> {
-        if self.check(&TokenType::Print) {
-            self.print_statement()
-        } else {
-            self.expression_statement()
+        use TokenType::*;
+        match self.current_token() {
+            Some(Token {
+                token_type: Print, ..
+            }) => self.print_statement(),
+            Some(Token {
+                token_type: LeftBrace,
+                ..
+            }) => self.block_statement(),
+            _ => self.expression_statement(),
         }
     }
 
@@ -127,6 +132,26 @@ impl Parser {
             })
         })?;
         Ok(Statement::Expression(expr))
+    }
+
+    fn block_statement(&mut self) -> Result<Statement, Error> {
+        self.consume(TokenType::LeftBrace)?;
+
+        let mut statements = Vec::new();
+
+        while !self.check(&TokenType::RightBrace) && !self.is_at_end() {
+            statements.push(self.declaration()?);
+        }
+
+        self.consume(TokenType::RightBrace).or_else(|_| {
+            Err(Error::ParsingError {
+                line: self.line,
+                position: self.position,
+                message: "Expected '}' after block".to_string(),
+            })
+        })?;
+
+        Ok(Statement::Block { statements })
     }
 
     fn print_statement(&mut self) -> Result<Statement, Error> {
@@ -277,11 +302,7 @@ impl Parser {
                     self.consume(TokenType::RightParen)?;
                     Ok(Expression::from(Grouping { expression: e }))
                 }
-                _ => Err(Error::ParsingError {
-                    line: self.line,
-                    position: self.position,
-                    message: format!("Unexpected token \"{}\", expected primary", token.lexeme),
-                }),
+                _ => panic!("Expected primary!!"),
             };
         } else {
             Err(Error::ParsingError {
@@ -351,6 +372,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<Vec<Statement>, Error> {
 
 #[test]
 fn test_statements() {
+    use crate::scanner;
     let expr = "
         1+1;
     ";

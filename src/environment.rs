@@ -24,6 +24,14 @@ impl Environment {
         }
     }
 
+    pub fn push(&mut self) {
+        self.stack.push(Frame::new());
+    }
+
+    pub fn pop(&mut self) {
+        self.stack.pop();
+    }
+
     pub fn head(&mut self) -> &mut Frame {
         let index = self.stack.len() - 1;
         self.stack.get_mut(index).unwrap()
