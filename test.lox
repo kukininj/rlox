@@ -4,9 +4,17 @@
 var language = "lox"; // asdf
 var boolean = 1 - (2 * 3) < -4 == false;
 print language;
+print "boolean: ";
+print boolean;
+if (boolean)
 {
+    print "then";
     print language;
     var language=1;
     print language;
+}
+else
+{
+    print "else";
 }
 print language;

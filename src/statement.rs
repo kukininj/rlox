@@ -1,6 +1,11 @@
 use crate::expression::{Expression, Identifier};
 
 #[derive(Debug, Clone)]
+pub struct Block {
+    pub statements: Vec<Statement>,
+}
+
+#[derive(Debug, Clone)]
 pub enum Statement {
     Expression(Expression),
     Print(Expression),
@@ -8,7 +13,10 @@ pub enum Statement {
         name: Identifier,
         initializer: Option<Expression>,
     },
-    Block {
-        statements: Vec<Statement>,
+    Block(Block),
+    If {
+        condition: Expression,
+        then_branch: Block,
+        else_branch: Option<Block>,
     },
 }

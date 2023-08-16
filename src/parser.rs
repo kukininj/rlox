@@ -1,4 +1,4 @@
-use crate::statement::Statement;
+use crate::statement::{Block, Statement};
 use crate::{error::Error, expression::*, Token, TokenType};
 
 struct Parser {
@@ -117,9 +117,37 @@ impl Parser {
             Some(Token {
                 token_type: LeftBrace,
                 ..
-            }) => self.block_statement(),
+            }) => Ok(Statement::Block(self.block_statement()?)),
+            Some(Token { token_type: If, .. }) => self.if_statement(),
             _ => self.expression_statement(),
         }
+    }
+
+    fn if_statement(&mut self) -> Result<Statement, Error> {
+        self.consume(TokenType::If)?;
+        let condition = self.expression()?;
+        if !self.check(&TokenType::LeftBrace) {
+            return Err(Error::ParsingError {
+                line: self.line,
+                position: self.position,
+                message: "Expected the beginning of a block after an if statement.".to_owned(),
+            });
+        }
+
+        let then_branch = self.block_statement()?;
+
+        let else_branch = if self.check(&TokenType::Else) {
+            self.consume(TokenType::Else)?;
+            Some(self.block_statement()?)
+        } else {
+            None
+        };
+
+        Ok(Statement::If {
+            condition,
+            then_branch,
+            else_branch,
+        })
     }
 
     fn expression_statement(&mut self) -> Result<Statement, Error> {
@@ -134,7 +162,7 @@ impl Parser {
         Ok(Statement::Expression(expr))
     }
 
-    fn block_statement(&mut self) -> Result<Statement, Error> {
+    fn block_statement(&mut self) -> Result<Block, Error> {
         self.consume(TokenType::LeftBrace)?;
 
         let mut statements = Vec::new();
@@ -151,7 +179,7 @@ impl Parser {
             })
         })?;
 
-        Ok(Statement::Block { statements })
+        Ok(Block { statements })
     }
 
     fn print_statement(&mut self) -> Result<Statement, Error> {

@@ -10,6 +10,7 @@ use crate::expression::LiteralValue;
 use crate::expression::Unary;
 use crate::expression::UnaryOperator;
 use crate::lox_value::LoxValue;
+use crate::statement::Block;
 use crate::statement::Statement;
 
 pub struct Interpreter {
@@ -55,13 +56,29 @@ impl Interpreter {
                 } => {
                     self.environment.define(name, LoxValue::Nil)?;
                 }
-                Statement::Block { statements } => {
-                    self.environment.push();
-                    self.run(statements)?;
-                    self.environment.pop();
+                Statement::Block(block) => {
+                    self.run_block(&block)?;
+                }
+                Statement::If {
+                    condition,
+                    then_branch,
+                    else_branch,
+                } => {
+                    if LoxValue::is_truthy(self.evaluate(condition)?) {
+                        self.run_block(&then_branch)?;
+                    } else if let Some(else_branch) = else_branch {
+                        self.run_block(&else_branch)?;
+                    }
                 }
             };
         }
+        Ok(())
+    }
+
+    pub fn run_block(&mut self, block: &Block) -> Result<(), Error> {
+        self.environment.push();
+        self.run(&block.statements)?;
+        self.environment.pop();
         Ok(())
     }
 
