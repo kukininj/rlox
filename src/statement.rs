@@ -1,6 +1,6 @@
 use crate::expression::{Expression, Identifier};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Statement {
     Expression(Expression),
     Print(Expression),

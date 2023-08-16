@@ -23,7 +23,7 @@ fn run(source: String) -> Result<(), Error> {
     let tree = parser::parse(tokens)?;
     // println!("tree: {:#?}", tree);
     let mut interpreter = interpreter::Interpreter::new();
-    let result = interpreter.run(tree);
+    let result = interpreter.run(&tree);
     println!("result: {:#?}", result);
 
     Ok(())
@@ -43,7 +43,7 @@ fn main() {
                 match scanner::scan_tokens(&line) {
                     Ok(tokens) => match parser::parse(tokens) {
                         Ok(tree) => {
-                            let result = interpreter.run(tree);
+                            let result = interpreter.run(&tree);
                             println!("{:?}", result);
                         }
                         Err(error) => {

@@ -39,13 +39,13 @@ impl Environment {
 
     pub fn define(
         &mut self,
-        Identifier(name, debug): Identifier,
+        Identifier(name, debug): &Identifier,
         value: LoxValue,
     ) -> Result<(), Error> {
         if let Some(Variable {
             defined_at: DebugInfo { line, position, .. },
             ..
-        }) = self.head().values.get(&name)
+        }) = self.head().values.get(name)
         {
             // TODO: dont use `name` here, Variable should store its identifier
             Err(Error::RuntimeError {
@@ -55,10 +55,10 @@ impl Environment {
             })
         } else {
             self.head().values.insert(
-                name,
+                name.clone(),
                 Variable {
                     value,
-                    defined_at: debug,
+                    defined_at: debug.clone(),
                 },
             );
             Ok(())

@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DebugInfo {
     pub line: usize,
     pub position: usize,
@@ -17,7 +17,7 @@ impl From<Token> for DebugInfo {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum BinaryOperator {
     Add(DebugInfo),
     Subtract(DebugInfo),
@@ -53,19 +53,19 @@ impl BinaryOperator {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Binary {
     pub left: Expression,
     pub operator: BinaryOperator,
     pub right: Expression,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Grouping {
     pub expression: Expression,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LiteralValue {
     String(String, DebugInfo),
     Number(f64, DebugInfo),
@@ -91,12 +91,12 @@ impl LiteralValue {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Literal {
     pub value: LiteralValue,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum UnaryOperator {
     Not(DebugInfo),
     Negative(DebugInfo),
@@ -116,13 +116,13 @@ impl UnaryOperator {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Unary {
     pub operator: UnaryOperator,
     pub right: Expression,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Identifier(pub String, pub DebugInfo);
 
 impl Identifier {
@@ -138,13 +138,13 @@ impl Identifier {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Assignment {
     pub target: Identifier,
     pub value: Expression,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expression {
     Binary(Box<Binary>),
     Grouping(Box<Grouping>),
