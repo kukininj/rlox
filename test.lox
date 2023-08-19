@@ -16,5 +16,19 @@ if (boolean)
 else
 {
     print "else";
+    if (!boolean)
+    {
+        print "inner then";
+    }
+    else
+    {
+        print "inner else";
+    }
 }
-print language;
+print "!!(1)";
+print !!(1);
+print !!(0);
+print false and true;
+print true and false;
+print 1 or 2;
+print false or true;

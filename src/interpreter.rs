@@ -7,6 +7,8 @@ use crate::expression::Expression;
 use crate::expression::Grouping;
 use crate::expression::Identifier;
 use crate::expression::LiteralValue;
+use crate::expression::Logical;
+use crate::expression::LogicalOperator;
 use crate::expression::Unary;
 use crate::expression::UnaryOperator;
 use crate::lox_value::LoxValue;
@@ -64,7 +66,7 @@ impl Interpreter {
                     then_branch,
                     else_branch,
                 } => {
-                    if LoxValue::is_truthy(self.evaluate(condition)?) {
+                    if LoxValue::is_truthy(&self.evaluate(condition)?) {
                         self.run_block(&then_branch)?;
                     } else if let Some(else_branch) = else_branch {
                         self.run_block(&else_branch)?;
@@ -92,6 +94,7 @@ impl Interpreter {
             Expression::Assignment(assignment) => {
                 self.visit_assignment(&assignment.target, &assignment.value)
             }
+            Expression::Logical(logical) => self.visit_logical(logical),
         };
         match result {
             Ok(value) => Ok(value),
@@ -211,7 +214,7 @@ impl Interpreter {
                 ..
             } => {
                 self.set_debug(&debug);
-                let b = LoxValue::is_truthy(right);
+                let b = LoxValue::is_truthy(&right);
                 Ok(LoxValue::Bool(!b))
             }
         }
@@ -228,6 +231,26 @@ impl Interpreter {
     ) -> Result<LoxValue, Error> {
         let value = self.evaluate(&value)?;
         self.environment.assign(target, value)
+    }
+
+    fn visit_logical(self: &mut Self, logical: &Logical) -> Result<LoxValue, Error> {
+        let left = self.evaluate(&logical.left)?;
+        match &logical.operator {
+            LogicalOperator::Or(debug) => {
+                self.set_debug(&debug);
+                if LoxValue::is_truthy(&left) {
+                    return Ok(left);
+                }
+            }
+            LogicalOperator::And(debug) => {
+                self.set_debug(&debug);
+                if !LoxValue::is_truthy(&left) {
+                    return Ok(left);
+                }
+            }
+        }
+        let right = self.evaluate(&logical.right)?;
+        Ok(right)
     }
 }
 

@@ -115,9 +115,9 @@ impl LoxValue {
         }
     }
 
-    pub fn is_truthy(value: LoxValue) -> bool {
+    pub fn is_truthy(value: &LoxValue) -> bool {
         match value {
-            LoxValue::Bool(b) => b,
+            LoxValue::Bool(b) => *b,
             LoxValue::Nil => false,
             _ => true,
         }

@@ -200,7 +200,7 @@ impl Parser {
     }
 
     fn assignment(&mut self) -> Result<Expression, Error> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
 
         if self.check(&TokenType::Equal) {
             self.advance()?;
@@ -217,6 +217,38 @@ impl Parser {
                 }
             }
         }
+        Ok(expr)
+    }
+
+    fn or(&mut self) -> Result<Expression, Error> {
+        let mut expr = self.and()?;
+
+        while let Some(operator) = self.match_token_type(&[TokenType::Or]) {
+            self.advance()?;
+            let right = self.and()?;
+            expr = Expression::from(Logical {
+                left: expr,
+                operator: LogicalOperator::new(operator)?,
+                right,
+            });
+        }
+
+        Ok(expr)
+    }
+
+    fn and(&mut self) -> Result<Expression, Error> {
+        let mut expr = self.equality()?;
+
+        while let Some(operator) = self.match_token_type(&[TokenType::And]) {
+            self.advance()?;
+            let right = self.equality()?;
+            expr = Expression::from(Logical {
+                left: expr,
+                operator: LogicalOperator::new(operator)?,
+                right,
+            });
+        }
+
         Ok(expr)
     }
 

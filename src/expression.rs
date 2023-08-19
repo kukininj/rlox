@@ -97,6 +97,33 @@ pub struct Literal {
 }
 
 #[derive(Debug, Clone)]
+pub enum LogicalOperator {
+    And(DebugInfo),
+    Or(DebugInfo),
+}
+
+impl LogicalOperator {
+    pub fn new(token: Token) -> Result<Self, Error> {
+        match token.token_type {
+            TokenType::And => Ok(Self::And(DebugInfo::from(token))),
+            TokenType::Or => Ok(Self::Or(DebugInfo::from(token))),
+            _ => Err(Error::ParsingError {
+                line: token.line,
+                position: token.position,
+                message: format!("Unknown logical operator \"{:?}\".", token.lexeme),
+            }),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Logical {
+    pub left: Expression,
+    pub operator: LogicalOperator,
+    pub right: Expression,
+}
+
+#[derive(Debug, Clone)]
 pub enum UnaryOperator {
     Not(DebugInfo),
     Negative(DebugInfo),
@@ -152,6 +179,7 @@ pub enum Expression {
     Unary(Box<Unary>),
     Identifier(Box<Identifier>),
     Assignment(Box<Assignment>),
+    Logical(Box<Logical>),
 }
 
 impl From<Binary> for Expression {
@@ -187,6 +215,12 @@ impl From<Identifier> for Expression {
 impl From<Assignment> for Expression {
     fn from(i: Assignment) -> Self {
         return Self::Assignment(Box::new(i));
+    }
+}
+
+impl From<Logical> for Expression {
+    fn from(i: Logical) -> Self {
+        return Self::Logical(Box::new(i));
     }
 }
 
