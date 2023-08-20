@@ -72,6 +72,11 @@ impl Interpreter {
                         self.run_block(&else_branch)?;
                     }
                 }
+                Statement::While { condition, body } => {
+                    while LoxValue::is_truthy(&self.evaluate(condition)?) {
+                        self.run_block(body)?;
+                    }
+                }
             };
         }
         Ok(())

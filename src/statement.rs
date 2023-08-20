@@ -19,4 +19,8 @@ pub enum Statement {
         then_branch: Block,
         else_branch: Option<Block>,
     },
+    While {
+        condition: Expression,
+        body: Block,
+    },
 }

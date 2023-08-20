@@ -119,6 +119,9 @@ impl Parser {
                 ..
             }) => Ok(Statement::Block(self.block_statement()?)),
             Some(Token { token_type: If, .. }) => self.if_statement(),
+            Some(Token {
+                token_type: While, ..
+            }) => self.while_statement(),
             _ => self.expression_statement(),
         }
     }
@@ -130,7 +133,7 @@ impl Parser {
             return Err(Error::ParsingError {
                 line: self.line,
                 position: self.position,
-                message: "Expected the beginning of a block after an if statement.".to_owned(),
+                message: "Expected the beginning of a block after an if ().".to_owned(),
             });
         }
 
@@ -148,6 +151,22 @@ impl Parser {
             then_branch,
             else_branch,
         })
+    }
+
+    fn while_statement(&mut self) -> Result<Statement, Error> {
+        self.consume(TokenType::While)?;
+        let condition = self.expression()?;
+        if !self.check(&TokenType::LeftBrace) {
+            return Err(Error::ParsingError {
+                line: self.line,
+                position: self.position,
+                message: "Expected the beginning of a block after an while ().".to_owned(),
+            });
+        }
+
+        let body = self.block_statement()?;
+
+        Ok(Statement::While { condition, body })
     }
 
     fn expression_statement(&mut self) -> Result<Statement, Error> {
