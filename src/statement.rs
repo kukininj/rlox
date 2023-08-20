@@ -7,6 +7,7 @@ pub struct Block {
 
 #[derive(Debug, Clone)]
 pub enum Statement {
+    Nop,
     Expression(Expression),
     Print(Expression),
     Variable {

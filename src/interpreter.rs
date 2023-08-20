@@ -38,6 +38,7 @@ impl Interpreter {
     pub fn run(self: &mut Self, statements: &Vec<Statement>) -> Result<(), Error> {
         for stmt in statements {
             match stmt {
+                Statement::Nop => {}
                 Statement::Expression(expr) => {
                     self.evaluate(expr)?;
                 }

@@ -122,6 +122,9 @@ impl Parser {
             Some(Token {
                 token_type: While, ..
             }) => self.while_statement(),
+            Some(Token {
+                token_type: For, ..
+            }) => self.for_statement(),
             _ => self.expression_statement(),
         }
     }
@@ -167,6 +170,66 @@ impl Parser {
         let body = self.block_statement()?;
 
         Ok(Statement::While { condition, body })
+    }
+
+    fn for_statement(&mut self) -> Result<Statement, Error> {
+        self.consume(TokenType::For)?;
+        self.consume(TokenType::LeftParen)?;
+
+        let initialization = match self.current_token() {
+            Some(Token {
+                token_type: TokenType::Semicolon,
+                ..
+            }) => {
+                self.consume(TokenType::Semicolon)?;
+                Statement::Nop
+            }
+            Some(Token {
+                token_type: TokenType::Var,
+                ..
+            }) => {
+                self.advance()?;
+                self.variable_declaration()?
+            }
+            _ => self.expression_statement()?,
+        };
+
+        let condition = if !self.check(&TokenType::Semicolon) {
+            self.expression()?
+        } else {
+            Expression::Literal(Box::new(Literal {
+                value: LiteralValue::True(DebugInfo {
+                    lexeme: "GENERATED_VALUE".to_owned(),
+                    position: self.position,
+                    line: self.line,
+                }),
+            }))
+        };
+        dbg!(self.line, self.position);
+        self.consume(TokenType::Semicolon)?;
+
+        let expression = if !self.check(&TokenType::RightParen) {
+            Statement::Expression(self.expression()?)
+        } else {
+            Statement::Nop
+        };
+
+        self.consume(TokenType::RightParen)?;
+
+        if !self.check(&TokenType::LeftBrace) {
+            return Err(Error::ParsingError {
+                line: self.line,
+                position: self.position,
+                message: "Expected the beginning of a block after an for (;;).".to_owned(),
+            });
+        }
+
+        let mut body = self.block_statement()?;
+        body.statements.push(expression);
+
+        Ok(Statement::Block(Block {
+            statements: vec![initialization, Statement::While { condition, body }],
+        }))
     }
 
     fn expression_statement(&mut self) -> Result<Statement, Error> {
@@ -360,19 +423,11 @@ impl Parser {
             let token = pat.clone();
             self.advance()?;
             return match token.token_type {
-                TokenType::False => Ok(Expression::from(Literal {
-                    value: LiteralValue::new(token)?,
-                })),
-                TokenType::True => Ok(Expression::from(Literal {
-                    value: LiteralValue::new(token)?,
-                })),
-                TokenType::Nil => Ok(Expression::from(Literal {
-                    value: LiteralValue::new(token)?,
-                })),
-                TokenType::Number(_) => Ok(Expression::from(Literal {
-                    value: LiteralValue::new(token)?,
-                })),
-                TokenType::String(_) => Ok(Expression::from(Literal {
+                TokenType::False
+                | TokenType::True
+                | TokenType::Nil
+                | TokenType::Number(_)
+                | TokenType::String(_) => Ok(Expression::from(Literal {
                     value: LiteralValue::new(token)?,
                 })),
                 TokenType::Identifier(_) => Ok(Expression::from(Identifier::new(token)?)),
@@ -381,7 +436,11 @@ impl Parser {
                     self.consume(TokenType::RightParen)?;
                     Ok(Expression::from(Grouping { expression: e }))
                 }
-                _ => panic!("Expected primary!!"),
+                _ => Err(Error::ParsingError {
+                    line: self.line,
+                    position: self.position,
+                    message: String::from("Expected Literal, Identifier or start of expression at"),
+                }),
             };
         } else {
             Err(Error::ParsingError {

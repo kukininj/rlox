@@ -39,3 +39,11 @@ while (i<10) {
     print i;
     i = i+1;
 }
+
+for (var n = 15; n>10; n = n-1 ) {
+    print n;
+}
+
+// for (;;) {
+//     print "infinity";
+// }
