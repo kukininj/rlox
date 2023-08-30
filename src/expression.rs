@@ -172,6 +172,13 @@ pub struct Assignment {
 }
 
 #[derive(Debug, Clone)]
+pub struct Call {
+    pub calle: Expression,
+    pub debug_info: DebugInfo,
+    pub args: Vec<Expression>,
+}
+
+#[derive(Debug, Clone)]
 pub enum Expression {
     Binary(Box<Binary>),
     Grouping(Box<Grouping>),
@@ -180,6 +187,7 @@ pub enum Expression {
     Identifier(Box<Identifier>),
     Assignment(Box<Assignment>),
     Logical(Box<Logical>),
+    Call(Box<Call>),
 }
 
 impl From<Binary> for Expression {
@@ -221,6 +229,12 @@ impl From<Assignment> for Expression {
 impl From<Logical> for Expression {
     fn from(i: Logical) -> Self {
         return Self::Logical(Box::new(i));
+    }
+}
+
+impl From<Call> for Expression {
+    fn from(i: Call) -> Self {
+        return Self::Call(Box::new(i));
     }
 }
 

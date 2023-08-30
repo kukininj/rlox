@@ -1,3 +1,4 @@
+use crate::scanner::from_slice;
 use crate::statement::{Block, Statement};
 use crate::{error::Error, expression::*, Token, TokenType};
 
@@ -59,15 +60,65 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> Result<Statement, Error> {
-        if self.check(&TokenType::Var) {
-            self.consume(TokenType::Var)?;
-            self.variable_declaration()
-        } else {
-            self.statement()
+        match self.current_token() {
+            Some(Token {
+                token_type: TokenType::Var,
+                ..
+            }) => self.variable_declaration(),
+            Some(Token {
+                token_type: TokenType::Fun,
+                ..
+            }) => self.function_declaration(),
+            _ => self.statement(),
         }
     }
 
+    fn function_declaration(&mut self) -> Result<Statement, Error> {
+        self.consume(TokenType::Fun)?;
+
+        let name = self.identifier().ok_or_else(|| Error::SyntaxError {
+            line: self.line,
+            position: self.position,
+            message: "Expected function identifier.".to_owned(),
+        })?;
+
+        self.advance()?;
+
+        self.consume(TokenType::LeftParen)?;
+
+        let mut args = Vec::new();
+
+        if !self.check(&TokenType::RightParen) {
+            args.push(self.identifier().ok_or_else(|| Error::ParsingError {
+                line: self.line,
+                position: self.position,
+                message: "Expected argument Identifier".to_owned(),
+            })?);
+
+            self.advance()?;
+
+            while self.check(&TokenType::Comma) {
+                self.consume(TokenType::Comma)?;
+
+                args.push(self.identifier().ok_or_else(|| Error::ParsingError {
+                    line: self.line,
+                    position: self.position,
+                    message: "Expected argument Identifier".to_owned(),
+                })?);
+
+                self.advance()?;
+            }
+        }
+
+        self.consume(TokenType::RightParen)?;
+
+        let body = self.block_statement()?;
+
+        Ok(Statement::Function { name, args, body })
+    }
+
     fn variable_declaration(&mut self) -> Result<Statement, Error> {
+        self.consume(TokenType::Var)?;
         match self.current_token() {
             Some(Token {
                 token_type: TokenType::Identifier(identifier),
@@ -187,10 +238,7 @@ impl Parser {
             Some(Token {
                 token_type: TokenType::Var,
                 ..
-            }) => {
-                self.advance()?;
-                self.variable_declaration()?
-            }
+            }) => self.variable_declaration()?,
             _ => self.expression_statement()?,
         };
 
@@ -205,7 +253,7 @@ impl Parser {
                 }),
             }))
         };
-        dbg!(self.line, self.position);
+
         self.consume(TokenType::Semicolon)?;
 
         let expression = if !self.check(&TokenType::RightParen) {
@@ -414,7 +462,41 @@ impl Parser {
                 right,
             }))
         } else {
-            self.primary()
+            self.call()
+        }
+    }
+
+    fn call(&mut self) -> Result<Expression, Error> {
+        let calle = self.primary()?;
+
+        if self.check(&TokenType::LeftParen) {
+            let debug_info = DebugInfo {
+                line: self.line,
+                position: self.position,
+                lexeme: "(".to_owned(),
+            };
+            self.consume(TokenType::LeftParen)?;
+
+            let mut args = Vec::new();
+
+            if !self.check(&TokenType::RightParen) {
+                args.push(self.expression()?);
+
+                while self.check(&TokenType::Comma) {
+                    self.consume(TokenType::Comma)?;
+                    args.push(self.expression()?);
+                }
+            }
+
+            self.consume(TokenType::RightParen)?;
+
+            Ok(Expression::from(Call {
+                calle,
+                debug_info,
+                args,
+            }))
+        } else {
+            Ok(calle)
         }
     }
 
@@ -472,6 +554,25 @@ impl Parser {
             if let Ok(_) = self.consume(TokenType::Semicolon) {
                 return;
             }
+        }
+    }
+
+    fn identifier(&mut self) -> Option<Identifier> {
+        match self.current_token() {
+            Some(Token {
+                token_type: TokenType::Identifier(identifier),
+                lexeme,
+                line,
+                position,
+            }) => Some(Identifier(
+                identifier.clone(),
+                DebugInfo {
+                    line: *line,
+                    position: *position,
+                    lexeme: lexeme.clone(),
+                },
+            )),
+            _ => None,
         }
     }
 }
@@ -571,4 +672,50 @@ fn test_parser() {
 
     let _ = parse(tokens).unwrap_err();
     println!("{:#?}", expr);
+}
+
+#[test]
+fn test_fun_stmt() {
+    use crate::scanner::scan_tokens;
+
+    let tokens =
+        scan_tokens(&"fun funkcja(arg) {print arg;}".to_owned()).expect("expected valid string");
+
+    let fun = parse(tokens).expect("expected valid tokens comprising valid function");
+
+    if let Some(Statement::Function { name, args, body }) = fun.get(0) {
+        assert_eq!(name.0, "funkcja");
+        assert_eq!(args.get(0).unwrap().0, "arg");
+        match body.statements[..] {
+            [Statement::Print(_)] => Ok(()),
+            _ => Err(()),
+        }
+        .expect("invalid block");
+    }
+}
+#[test]
+fn test_call() {
+    use crate::scanner::scan_tokens;
+
+    let tokens = scan_tokens(&"funkcja(arg);".to_owned()).expect("expected valid string");
+
+    let call = parse(tokens).expect("expected valid tokens comprising valid function");
+
+    if let Some(Statement::Expression(expr)) = call.get(0) {
+        match expr {
+            Expression::Call(call) => match *call.to_owned() {
+                Call {
+                    calle: Expression::Identifier(identifier),
+                    debug_info: _,
+                    args,
+                } => {
+                    assert_eq!(identifier.0, "funkcja");
+                    Ok(())
+                }
+                _ => Err(()),
+            },
+            _ => Err(()),
+        }
+        .expect("expected valid call in expression stmt");
+    }
 }

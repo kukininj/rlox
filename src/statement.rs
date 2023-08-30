@@ -24,4 +24,9 @@ pub enum Statement {
         condition: Expression,
         body: Block,
     },
+    Function {
+        name: Identifier,
+        args: Vec<Identifier>,
+        body: Block,
+    },
 }

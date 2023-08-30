@@ -2,6 +2,7 @@ use crate::environment::Environment;
 use crate::error::Error;
 use crate::expression::Binary;
 use crate::expression::BinaryOperator;
+use crate::expression::Call;
 use crate::expression::DebugInfo;
 use crate::expression::Expression;
 use crate::expression::Grouping;
@@ -78,6 +79,7 @@ impl Interpreter {
                         self.run_block(body)?;
                     }
                 }
+                Statement::Function { name, args, body } => todo!(),
             };
         }
         Ok(())
@@ -101,6 +103,7 @@ impl Interpreter {
                 self.visit_assignment(&assignment.target, &assignment.value)
             }
             Expression::Logical(logical) => self.visit_logical(logical),
+            Expression::Call(call) => self.visit_call(call),
         };
         match result {
             Ok(value) => Ok(value),
@@ -257,6 +260,17 @@ impl Interpreter {
         }
         let right = self.evaluate(&logical.right)?;
         Ok(right)
+    }
+
+    fn visit_call(self: &mut Self, call: &Call) -> Result<LoxValue, Error> {
+        let Call {
+            calle,
+            debug_info,
+            args,
+        } = call;
+
+        // TODO: implement function calls
+        Ok(LoxValue::Nil)
     }
 }
 
