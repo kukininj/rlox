@@ -304,3 +304,42 @@ fn basic_arithmetics() {
     let mut interp = Interpreter::new();
     interp.run(&tree).unwrap();
 }
+
+#[test]
+fn variables() {
+    use crate::parser;
+    use crate::scanner;
+    let source = "var a = 1; a = a +2;".to_string();
+    let tokens = scanner::scan_tokens(&source).unwrap();
+    let tree = parser::parse(tokens).unwrap();
+    let mut interp = Interpreter::new();
+    interp.run(&tree).unwrap();
+    let val = interp
+        .environment
+        .get(&Identifier("a".to_owned(), DebugInfo::default()))
+        .expect("Expected variable `a` to be defined.");
+
+    assert_eq!(val, LoxValue::Number(3.));
+}
+
+#[test]
+fn loops() {
+    use crate::parser;
+    use crate::scanner;
+    let source = concat!(
+        "var a = 1;",
+        "for (var i = 0; i<10; i = i + 1)",
+        "{a = a+2;}"
+    )
+    .to_string();
+    let tokens = scanner::scan_tokens(&source).unwrap();
+    let tree = parser::parse(tokens).unwrap();
+    let mut interp = Interpreter::new();
+    interp.run(&tree).unwrap();
+    let val = interp
+        .environment
+        .get(&Identifier("a".to_owned(), DebugInfo::default()))
+        .expect("Expected variable `a` to be defined.");
+
+    assert_eq!(val, LoxValue::Number(21.));
+}

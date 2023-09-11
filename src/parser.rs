@@ -9,6 +9,18 @@ struct Parser {
     position: usize,
 }
 
+macro_rules! check_m {
+    ($self:ident, $token_type:pat) => {
+        matches!(
+            $self.current_token(),
+            Some(Token {
+                token_type: $token_type,
+                ..
+            })
+        )
+    };
+}
+
 impl Parser {
     fn current_token(&self) -> Option<&Token> {
         self.tokens.get(self.current_index)
@@ -119,62 +131,48 @@ impl Parser {
 
     fn variable_declaration(&mut self) -> Result<Statement, Error> {
         self.consume(TokenType::Var)?;
-        match self.current_token() {
-            Some(Token {
-                token_type: TokenType::Identifier(identifier),
-                lexeme,
-                line,
-                position,
-            }) => {
-                let name = identifier.clone();
-                let line = *line;
-                let position = *position;
-                let lexeme = lexeme.clone();
-                self.advance()?;
 
-                let mut initializer = None;
-                if self.check(&TokenType::Equal) {
-                    self.advance()?;
-                    initializer = Some(self.expression()?);
-                }
-                self.consume(TokenType::Semicolon)?;
+        let identifier = self.identifier().ok_or_else(|| Error::ParsingError {
+            line: self.line,
+            position: self.position,
+            message: "Expected varaible Identifier".to_owned(),
+        })?;
 
-                Ok(Statement::Variable {
-                    name: Identifier(
-                        name,
-                        DebugInfo {
-                            line,
-                            position,
-                            lexeme,
-                        },
-                    ),
-                    initializer,
-                })
-            }
-            _ => Err(Error::ParsingError {
-                line: self.line,
-                position: self.position,
-                message: String::from("Expected variable name"),
-            }),
+        self.advance()?;
+
+        let mut initializer = None;
+        if self.check(&TokenType::Equal) {
+            self.advance()?;
+            initializer = Some(self.expression()?);
         }
+        self.consume(TokenType::Semicolon)?;
+
+        Ok(Statement::Variable {
+            name: identifier,
+            initializer,
+        })
     }
 
     fn statement(&mut self) -> Result<Statement, Error> {
-        use TokenType::*;
+        use TokenType as T;
         match self.current_token() {
             Some(Token {
-                token_type: Print, ..
+                token_type: T::Print,
+                ..
             }) => self.print_statement(),
             Some(Token {
-                token_type: LeftBrace,
+                token_type: T::LeftBrace,
                 ..
             }) => Ok(Statement::Block(self.block_statement()?)),
-            Some(Token { token_type: If, .. }) => self.if_statement(),
             Some(Token {
-                token_type: While, ..
+                token_type: T::If, ..
+            }) => self.if_statement(),
+            Some(Token {
+                token_type: T::While,
+                ..
             }) => self.while_statement(),
             Some(Token {
-                token_type: For, ..
+                token_type: T::For, ..
             }) => self.for_statement(),
             _ => self.expression_statement(),
         }
@@ -479,7 +477,7 @@ impl Parser {
 
             let mut args = Vec::new();
 
-            if !self.check(&TokenType::RightParen) {
+            if !check_m!(self, TokenType::RightParen) {
                 args.push(self.expression()?);
 
                 while self.check(&TokenType::Comma) {
@@ -693,6 +691,7 @@ fn test_fun_stmt() {
         .expect("invalid block");
     }
 }
+
 #[test]
 fn test_call() {
     use crate::scanner::scan_tokens;
@@ -710,7 +709,11 @@ fn test_call() {
                     args,
                 } => {
                     assert_eq!(identifier.0, "funkcja");
-                    Ok(())
+                    if let Expression::Identifier(_) = args.get(0).unwrap() {
+                        Ok(())
+                    } else {
+                        Err(())
+                    }
                 }
                 _ => Err(()),
             },
