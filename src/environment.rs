@@ -65,37 +65,23 @@ impl Environment {
         }
     }
 
-    pub fn get(&self, identifier: &Identifier) -> Result<LoxValue, Error> {
-        for frame in self.stack.iter().rev() {
-            if let Some(value) = frame.values.get(&identifier.0).map(|v| v.value.clone()) {
-                return Ok(value);
-            }
-        }
-        let Identifier(name, DebugInfo { line, position, .. }) = identifier;
-        Err(Error::RuntimeError {
-            line: *line,
-            position: *position,
-            message: format!("Variable {name} not defined!"),
-        })
+    pub fn get(&self, identifier: &String) -> Option<LoxValue> {
+        self.stack
+            .iter()
+            .rev()
+            .find_map(|frame| frame.values.get(identifier))
+            .map(|var| var.value.clone())
     }
 
-    pub fn assign(&mut self, target: &Identifier, value: LoxValue) -> Result<LoxValue, Error> {
-        if let Some(target) = self
-            .stack
+    pub fn assign(&mut self, target: &String, value: LoxValue) -> Option<LoxValue> {
+        self.stack
             .iter_mut()
             .rev()
-            .find_map(|frame| frame.values.get_mut(&target.0))
-        {
-            target.value = value.clone();
-            Ok(value)
-        } else {
-            let Identifier(name, DebugInfo { line, position, .. }) = target;
-            Err(Error::RuntimeError {
-                line: *line,
-                position: *position,
-                message: format!("Variable {name} already declared at {line}:{position}!"),
+            .find_map(|frame| frame.values.get_mut(target))
+            .map(|var| {
+                var.value = value.clone();
+                value
             })
-        }
     }
 }
 

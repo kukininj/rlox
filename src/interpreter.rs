@@ -230,7 +230,14 @@ impl Interpreter {
     }
 
     fn visit_identifier(self: &mut Self, identifier: &Identifier) -> Result<LoxValue, Error> {
-        self.environment.get(identifier)
+        let Identifier(name, DebugInfo { line, position, .. }) = identifier;
+        self.environment
+            .get(name)
+            .ok_or_else(|| Error::RuntimeError {
+                line: *line,
+                position: *position,
+                message: format!("Variable {name} not defined!"),
+            })
     }
 
     fn visit_assignment(
@@ -239,7 +246,14 @@ impl Interpreter {
         value: &Expression,
     ) -> Result<LoxValue, Error> {
         let value = self.evaluate(&value)?;
-        self.environment.assign(target, value)
+        let Identifier(name, DebugInfo { line, position, .. }) = target;
+        self.environment
+            .assign(&name, value)
+            .ok_or_else(|| Error::RuntimeError {
+                line: *line,
+                position: *position,
+                message: format!("Variable {name} already declared at {line}:{position}!"),
+            })
     }
 
     fn visit_logical(self: &mut Self, logical: &Logical) -> Result<LoxValue, Error> {
@@ -316,7 +330,7 @@ fn variables() {
     interp.run(&tree).unwrap();
     let val = interp
         .environment
-        .get(&Identifier("a".to_owned(), DebugInfo::default()))
+        .get(&"a".to_string())
         .expect("Expected variable `a` to be defined.");
 
     assert_eq!(val, LoxValue::Number(3.));
@@ -338,7 +352,7 @@ fn loops() {
     interp.run(&tree).unwrap();
     let val = interp
         .environment
-        .get(&Identifier("a".to_owned(), DebugInfo::default()))
+        .get(&"a".to_string())
         .expect("Expected variable `a` to be defined.");
 
     assert_eq!(val, LoxValue::Number(21.));
