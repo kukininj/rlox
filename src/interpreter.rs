@@ -17,9 +17,9 @@ use crate::statement::Block;
 use crate::statement::Statement;
 
 pub struct Interpreter {
-    line: usize,
-    position: usize,
-    environment: Environment,
+    pub line: usize,
+    pub position: usize,
+    pub environment: Environment,
 }
 
 impl Interpreter {
@@ -282,9 +282,29 @@ impl Interpreter {
             debug_info,
             args,
         } = call;
+        let DebugInfo {
+            line,
+            position,
+            lexeme: _,
+        } = debug_info;
 
-        // TODO: implement function calls
-        Ok(LoxValue::Nil)
+        let calle = self.evaluate(calle)?;
+        match calle {
+            LoxValue::Function(fun) => {
+                let mut arg_values: Vec<LoxValue> = Vec::new();
+
+                for exp in args {
+                    arg_values.push(self.evaluate(exp)?);
+                }
+
+                return fun.call(&mut self.environment, arg_values.into_boxed_slice());
+            }
+            _ => Err(Error::RuntimeError {
+                line: *line,
+                position: *position,
+                message: "Expected a function".to_owned(),
+            }),
+        }
     }
 }
 

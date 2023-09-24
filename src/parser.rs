@@ -104,7 +104,7 @@ impl Parser {
             args.push(self.identifier().ok_or_else(|| Error::ParsingError {
                 line: self.line,
                 position: self.position,
-                message: "Expected argument Identifier".to_owned(),
+                message: "Expected first argument Identifier".to_owned(),
             })?);
 
             self.advance()?;

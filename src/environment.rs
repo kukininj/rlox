@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::error::Error;
 use crate::expression::{DebugInfo, Identifier};
+use crate::lox_function::ForeinFun;
 use crate::lox_value::LoxValue;
 
 pub struct Variable {
@@ -91,4 +92,57 @@ impl Frame {
             values: HashMap::new(),
         }
     }
+}
+
+#[test]
+fn test_function_call() {
+    use crate::interpreter::Interpreter;
+    use crate::parser;
+    use crate::scanner;
+    let source = concat!("var a = test(123);",).to_string();
+    let tokens = scanner::scan_tokens(&source).unwrap();
+    let tree = parser::parse(tokens).unwrap();
+    let mut interp = Interpreter::new();
+
+    let global_identifier = Identifier(
+        "test".to_owned(),
+        DebugInfo {
+            line: 0,
+            position: 0,
+            lexeme: "<native test>".to_owned(),
+        },
+    );
+
+    fn test(_env: &mut Environment, args: Box<[LoxValue]>) -> Result<LoxValue, Error> {
+        println!("Woo, called a native function!! args: {args:?}");
+        let a = args.get(0).unwrap();
+
+        let str = format!("({})", LoxValue::to_string(a));
+
+        Ok(LoxValue::String(str))
+    }
+
+    let test_arg = Identifier(
+        "arg".to_owned(),
+        DebugInfo {
+            line: 0,
+            position: 0,
+            lexeme: "<native arg>".to_owned(),
+        },
+    );
+
+    let fun = ForeinFun::new("test".to_owned(), Box::new([test_arg]), test);
+
+    interp
+        .environment
+        .define(&global_identifier, LoxValue::Function(fun.into()))
+        .unwrap();
+
+    interp.run(&tree).unwrap();
+    let val = interp
+        .environment
+        .get(&"a".to_string())
+        .expect("Expected variable `a` to be defined.");
+
+    assert_eq!(val, LoxValue::String("(123)".to_owned()));
 }

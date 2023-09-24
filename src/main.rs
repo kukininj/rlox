@@ -2,6 +2,7 @@ mod environment;
 mod error;
 mod expression;
 mod interpreter;
+mod lox_function;
 mod lox_object;
 mod lox_value;
 mod parser;

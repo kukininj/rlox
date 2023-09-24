@@ -1,11 +1,12 @@
-use crate::{error::Error, lox_object::LoxObject};
+use crate::{error::Error, lox_function::LoxFunction};
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum LoxValue {
     Number(f64),
     Bool(bool),
     String(String),
-    Object(LoxObject),
+    // Object(LoxObject),
+    Function(LoxFunction),
     Nil,
 }
 
@@ -15,8 +16,9 @@ impl core::fmt::Display for LoxValue {
             LoxValue::Number(n) => write!(f, "{}", n),
             LoxValue::Bool(b) => write!(f, "{}", b),
             LoxValue::String(s) => write!(f, "{}", s),
-            LoxValue::Object(o) => write!(f, "{}", o.to_string()),
+            // LoxValue::Object(o) => write!(f, "{}", o.to_string()),
             LoxValue::Nil => write!(f, "nil"),
+            LoxValue::Function(fun) => write!(f, "{}", fun),
         }
     }
 }
@@ -120,6 +122,16 @@ impl LoxValue {
             LoxValue::Bool(b) => *b,
             LoxValue::Nil => false,
             _ => true,
+        }
+    }
+
+    pub fn to_string(value: &LoxValue) -> String {
+        match value {
+            LoxValue::Number(n) => n.to_string(),
+            LoxValue::Bool(b) => b.to_string(),
+            LoxValue::String(s) => s.clone(),
+            LoxValue::Function(f) => f.to_string(),
+            LoxValue::Nil => "nil".to_owned(),
         }
     }
 }
