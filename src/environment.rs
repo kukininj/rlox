@@ -122,16 +122,7 @@ fn test_function_call() {
         Ok(LoxValue::String(str))
     }
 
-    let test_arg = Identifier(
-        "arg".to_owned(),
-        DebugInfo {
-            line: 0,
-            position: 0,
-            lexeme: "<native arg>".to_owned(),
-        },
-    );
-
-    let fun = ForeinFun::new("test".to_owned(), Box::new([test_arg]), test);
+    let fun = ForeinFun::new("test".to_owned(), 1, test);
 
     interp
         .environment

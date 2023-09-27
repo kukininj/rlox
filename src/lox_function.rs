@@ -47,17 +47,17 @@ trait LoxFunction_ {
 #[derive(Debug)]
 pub struct ForeinFun {
     name: String,
-    args: Box<[Identifier]>,
+    arity: usize,
     fun: fn(&mut Environment, Box<[LoxValue]>) -> Result<LoxValue, Error>,
 }
 
 impl ForeinFun {
     pub fn new(
         name: String,
-        args: Box<[Identifier]>,
+        arity: usize,
         fun: fn(&mut Environment, Box<[LoxValue]>) -> Result<LoxValue, Error>,
     ) -> Self {
-        Self { name, args, fun }
+        Self { name, arity, fun }
     }
 }
 
@@ -69,15 +69,11 @@ impl Into<LoxFunction> for ForeinFun {
 
 impl LoxFunction_ for ForeinFun {
     fn call(&self, env: &mut Environment, args: Box<[LoxValue]>) -> Result<LoxValue, Error> {
-        if self.args.len() != args.len() {
+        if self.arity != args.len() {
             Err(Error::RuntimeError {
                 line: 0,
                 position: 0,
-                message: format!(
-                    "Expected {} arguments, got {}.",
-                    self.args.len(),
-                    args.len()
-                ),
+                message: format!("Expected {} arguments, got {}.", self.arity, args.len()),
             })
         } else {
             Ok((self.fun)(env, args)?)
@@ -85,7 +81,7 @@ impl LoxFunction_ for ForeinFun {
     }
 
     fn arity(&self) -> usize {
-        self.args.len()
+        self.arity
     }
 
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -93,7 +89,7 @@ impl LoxFunction_ for ForeinFun {
     }
 }
 
-pub struct NativeFun {
+pub struct LoxFunc {
     name: Identifier,
     args: Vec<Identifier>,
     body: Block,
