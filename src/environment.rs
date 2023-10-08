@@ -113,7 +113,7 @@ fn test_function_call() {
         },
     );
 
-    fn test(_env: &mut Environment, args: Box<[LoxValue]>) -> Result<LoxValue, Error> {
+    fn test(_env: &mut Interpreter, args: Box<[LoxValue]>) -> Result<LoxValue, Error> {
         println!("Woo, called a native function!! args: {args:?}");
         let a = args.get(0).unwrap();
 

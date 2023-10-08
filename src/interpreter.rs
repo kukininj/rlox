@@ -12,6 +12,7 @@ use crate::expression::Logical;
 use crate::expression::LogicalOperator;
 use crate::expression::Unary;
 use crate::expression::UnaryOperator;
+use crate::lox_function::NativeFun;
 use crate::lox_value::LoxValue;
 use crate::statement::Block;
 use crate::statement::Statement;
@@ -79,7 +80,9 @@ impl Interpreter {
                         self.run_block(body)?;
                     }
                 }
-                Statement::Function { name, args, body } => todo!(),
+                Statement::Function { name, args, body } => {
+                    self.define_function(name, args, body)?
+                }
             };
         }
         Ok(())
@@ -89,6 +92,19 @@ impl Interpreter {
         self.environment.push();
         self.run(&block.statements)?;
         self.environment.pop();
+        Ok(())
+    }
+
+    pub fn define_function(
+        &mut self,
+        name: &Identifier,
+        args: &Vec<Identifier>,
+        body: &Block,
+    ) -> Result<(), Error> {
+        let lox_function =
+            NativeFun::new(name.clone(), args.clone().into_boxed_slice(), body.clone());
+        self.environment
+            .define(name, LoxValue::Function(lox_function.into()))?;
         Ok(())
     }
 
@@ -282,26 +298,21 @@ impl Interpreter {
             debug_info,
             args,
         } = call;
-        let DebugInfo {
-            line,
-            position,
-            lexeme: _,
-        } = debug_info;
 
         let calle = self.evaluate(calle)?;
         match calle {
-            LoxValue::Function(fun) => {
+            LoxValue::Function(mut fun) => {
                 let mut arg_values: Vec<LoxValue> = Vec::new();
 
                 for exp in args {
                     arg_values.push(self.evaluate(exp)?);
                 }
 
-                return fun.call(&mut self.environment, arg_values.into_boxed_slice());
+                return fun.call(self, arg_values.into_boxed_slice());
             }
             _ => Err(Error::RuntimeError {
-                line: *line,
-                position: *position,
+                line: debug_info.line,
+                position: debug_info.position,
                 message: "Expected a function".to_owned(),
             }),
         }

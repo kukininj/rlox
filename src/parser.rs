@@ -341,7 +341,7 @@ impl Parser {
                     }));
                 }
                 _ => {
-                    todo!()
+                    todo!("Assingment to non-identifier is not yet suported.")
                 }
             }
         }
