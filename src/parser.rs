@@ -124,6 +124,8 @@ impl Parser {
 
         self.consume(TokenType::RightParen)?;
 
+        // ciało funkcji nie musi zawierać Statement::Return,
+        //  czyt NativeFun::call
         let body = self.block_statement()?;
 
         Ok(Statement::Function { name, args, body })
@@ -174,6 +176,10 @@ impl Parser {
             Some(Token {
                 token_type: T::For, ..
             }) => self.for_statement(),
+            Some(Token {
+                token_type: T::Return,
+                ..
+            }) => self.return_statement(),
             _ => self.expression_statement(),
         }
     }
@@ -288,6 +294,26 @@ impl Parser {
             })
         })?;
         Ok(Statement::Expression(expr))
+    }
+
+    fn return_statement(&mut self) -> Result<Statement, Error> {
+        self.consume(TokenType::Return).expect("return token");
+
+        let expr = if !self.check(&TokenType::Semicolon) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+
+        self.consume(TokenType::Semicolon).or_else(|_| {
+            Err(Error::ParsingError {
+                line: self.line,
+                position: self.position,
+                message: "Expected ';' at the end of return statement".to_string(),
+            })
+        })?;
+
+        Ok(Statement::Return { value: expr })
     }
 
     fn block_statement(&mut self) -> Result<Block, Error> {

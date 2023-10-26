@@ -117,7 +117,14 @@ impl LoxFunction_ for NativeFun {
             for (identifier, value) in std::iter::zip(self.args.into_iter(), args.into_iter()) {
                 env.environment.define(identifier, value.clone())?;
             }
-            let ret_value = env.run(&self.body.statements).map(|_| LoxValue::Nil);
+            let ret_value = match env.run(&self.body.statements) {
+                // napotkano Statement::Return podczas wykonywania funkcji
+                Err(Error::Return { value }) => Ok(value.unwrap_or(LoxValue::Nil)),
+                // ciało funkcji nie zawierało wyrażenia return, być może inne przypadki
+                Ok(_) => Ok(LoxValue::Nil),
+                // RuntimeError
+                Err(e) => Err(e),
+            };
             env.environment.pop();
 
             ret_value
@@ -149,7 +156,7 @@ impl Into<LoxFunction> for NativeFun {
 fn test_fun_stmt() {
     use crate::parser;
     use crate::scanner;
-    let source = concat!("fun funkcja(arg) {print arg;}", "var a = funkcja(123);",).to_string();
+    let source = concat!("fun funkcja(arg) {return arg;}", "var a = funkcja(123);",).to_string();
     let tokens = scanner::scan_tokens(&source).unwrap();
     let tree = parser::parse(tokens).unwrap();
     let mut interp = Interpreter::new();
@@ -160,6 +167,6 @@ fn test_fun_stmt() {
         .expect("Expected variable `a` to be defined.");
 
     // TODO: fix when return statements implemented
-    // assert_eq!(val, LoxValue::Number(123.));
-    assert_eq!(val, LoxValue::Nil);
+    assert_eq!(val, LoxValue::Number(123.));
+    // assert_eq!(val, LoxValue::Nil);
 }

@@ -29,4 +29,7 @@ pub enum Statement {
         args: Vec<Identifier>,
         body: Block,
     },
+    Return {
+        value: Option<Expression>,
+    },
 }

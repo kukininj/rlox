@@ -83,6 +83,14 @@ impl Interpreter {
                 Statement::Function { name, args, body } => {
                     self.define_function(name, args, body)?
                 }
+                Statement::Return { value } => {
+                    let value = if let Some(v) = value {
+                        Some(self.evaluate(v)?)
+                    } else {
+                        None
+                    };
+                    return Err(Error::Return { value });
+                }
             };
         }
         Ok(())

@@ -1,3 +1,5 @@
+use crate::lox_value::LoxValue;
+
 #[derive(Debug)]
 pub enum Error {
     SyntaxError {
@@ -32,5 +34,8 @@ pub enum Error {
         line: usize,
         position: usize,
         message: String,
+    },
+    Return {
+        value: Option<LoxValue>,
     },
 }
