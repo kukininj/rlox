@@ -7,6 +7,7 @@ use crate::expression::DebugInfo;
 use crate::expression::Expression;
 use crate::expression::Grouping;
 use crate::expression::Identifier;
+use crate::expression::IdentifierId;
 use crate::expression::LiteralValue;
 use crate::expression::Logical;
 use crate::expression::LogicalOperator;
@@ -14,6 +15,7 @@ use crate::expression::Unary;
 use crate::expression::UnaryOperator;
 use crate::lox_function::LoxFun;
 use crate::lox_value::LoxValue;
+use crate::resolver::AccessTable;
 use crate::statement::Block;
 use crate::statement::Statement;
 
@@ -21,6 +23,7 @@ pub struct Interpreter {
     pub line: usize,
     pub position: usize,
     pub environment: Environment,
+    pub access_table: AccessTable,
 }
 
 impl Interpreter {
@@ -29,12 +32,22 @@ impl Interpreter {
             line: 0,
             position: 0,
             environment: Environment::new(),
+            access_table: AccessTable::empty(),
         }
     }
 
     fn set_debug(self: &mut Self, debug: &DebugInfo) {
         self.line = debug.line;
         self.position = debug.position;
+    }
+
+    pub fn execute(
+        &mut self,
+        statements: &Vec<Statement>,
+        access_table: AccessTable,
+    ) -> Result<(), Error> {
+        access_table.resolve(IdentifierId::from(0));
+        self.run(statements)
     }
 
     pub fn run(self: &mut Self, statements: &Vec<Statement>) -> Result<(), Error> {

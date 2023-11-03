@@ -19,13 +19,16 @@ use std::fs;
 use std::io;
 use std::io::Write;
 
+use crate::resolver::resolve;
+
 fn run(source: String) -> Result<(), Error> {
     let tokens = scanner::scan_tokens(&source)?;
     // println!("tokens: {:#?}", tokens);
     let tree = parser::parse(tokens)?;
+    let access_table = resolve(&tree);
     // println!("tree: {:#?}", tree);
     let mut interpreter = interpreter::Interpreter::new();
-    let result = interpreter.run(&tree);
+    let result = interpreter.execute(&tree, access_table);
     println!("result: {:#?}", result);
 
     Ok(())
@@ -43,6 +46,7 @@ fn main() {
 
             while let Ok(_) = io::stdin().read_line(&mut line) {
                 match scanner::scan_tokens(&line) {
+                    // TODO: parser teraz przechowuje ilość utworzonych identyfikatorów, trzeba wydzielić go do osobnego obiektu
                     Ok(tokens) => match parser::parse(tokens) {
                         Ok(tree) => {
                             let result = interpreter.run(&tree);
