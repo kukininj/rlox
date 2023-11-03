@@ -6,6 +6,7 @@ mod lox_function;
 mod lox_object;
 mod lox_value;
 mod parser;
+mod resolver;
 mod scanner;
 mod statement;
 mod tokens;

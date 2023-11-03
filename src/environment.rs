@@ -40,7 +40,11 @@ impl Environment {
 
     pub fn define(
         &mut self,
-        Identifier(name, debug): &Identifier,
+        Identifier {
+            name,
+            debug_info: debug,
+            id: _,
+        }: &Identifier,
         value: LoxValue,
     ) -> Result<(), Error> {
         if let Some(Variable {
@@ -104,14 +108,15 @@ fn test_function_call() {
     let tree = parser::parse(tokens).unwrap();
     let mut interp = Interpreter::new();
 
-    let global_identifier = Identifier(
-        "test".to_owned(),
-        DebugInfo {
+    let global_identifier = Identifier {
+        name: "test".to_owned(),
+        id: 0,
+        debug_info: DebugInfo {
             line: 0,
             position: 0,
             lexeme: "<native test>".to_owned(),
         },
-    );
+    };
 
     fn test(_env: &mut Interpreter, args: Box<[LoxValue]>) -> Result<LoxValue, Error> {
         println!("Woo, called a native function!! args: {args:?}");

@@ -1,4 +1,4 @@
-use crate::{error::Error, lox_function::LoxFunction};
+use crate::{error::Error, lox_function::FunObject};
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum LoxValue {
@@ -6,7 +6,7 @@ pub enum LoxValue {
     Bool(bool),
     String(String),
     // Object(LoxObject),
-    Function(LoxFunction),
+    Function(FunObject),
     Nil,
 }
 

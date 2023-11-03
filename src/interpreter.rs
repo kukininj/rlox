@@ -12,7 +12,7 @@ use crate::expression::Logical;
 use crate::expression::LogicalOperator;
 use crate::expression::Unary;
 use crate::expression::UnaryOperator;
-use crate::lox_function::NativeFun;
+use crate::lox_function::LoxFun;
 use crate::lox_value::LoxValue;
 use crate::statement::Block;
 use crate::statement::Statement;
@@ -109,8 +109,7 @@ impl Interpreter {
         args: &Vec<Identifier>,
         body: &Block,
     ) -> Result<(), Error> {
-        let lox_function =
-            NativeFun::new(name.clone(), args.clone().into_boxed_slice(), body.clone());
+        let lox_function = LoxFun::new(name.clone(), args.clone().into_boxed_slice(), body.clone());
         self.environment
             .define(name, LoxValue::Function(lox_function.into()))?;
         Ok(())
@@ -254,7 +253,11 @@ impl Interpreter {
     }
 
     fn visit_identifier(self: &mut Self, identifier: &Identifier) -> Result<LoxValue, Error> {
-        let Identifier(name, DebugInfo { line, position, .. }) = identifier;
+        let Identifier {
+            name,
+            debug_info: DebugInfo { line, position, .. },
+            id,
+        } = identifier;
         self.environment
             .get(name)
             .ok_or_else(|| Error::RuntimeError {
@@ -270,7 +273,11 @@ impl Interpreter {
         value: &Expression,
     ) -> Result<LoxValue, Error> {
         let value = self.evaluate(&value)?;
-        let Identifier(name, DebugInfo { line, position, .. }) = target;
+        let Identifier {
+            name,
+            debug_info: DebugInfo { line, position, .. },
+            id,
+        } = target;
         self.environment
             .assign(&name, value)
             .ok_or_else(|| Error::RuntimeError {

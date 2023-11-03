@@ -4,6 +4,9 @@ use crate::{error::Error, expression::*, Token, TokenType};
 
 struct Parser {
     tokens: Vec<Token>,
+
+    identifier_counter: usize,
+
     current_index: usize,
     line: usize,
     position: usize,
@@ -536,7 +539,14 @@ impl Parser {
                 | TokenType::String(_) => Ok(Expression::from(Literal {
                     value: LiteralValue::new(token)?,
                 })),
-                TokenType::Identifier(_) => Ok(Expression::from(Identifier::new(token)?)),
+                TokenType::Identifier(name) => Ok(Expression::from(self.create_identifier(
+                    name.clone(),
+                    DebugInfo {
+                        line: token.line,
+                        position: token.position,
+                        lexeme: token.lexeme,
+                    },
+                ))),
                 TokenType::LeftParen => {
                     let e = self.expression()?;
                     self.consume(TokenType::RightParen)?;
@@ -581,15 +591,21 @@ impl Parser {
         }
     }
 
+    fn create_identifier(&mut self, name: String, debug_info: DebugInfo) -> Identifier {
+        self.identifier_counter += 1;
+
+        Identifier::from(name, self.identifier_counter, debug_info)
+    }
+
     fn identifier(&mut self) -> Option<Identifier> {
         match self.current_token() {
             Some(Token {
-                token_type: TokenType::Identifier(identifier),
+                token_type: TokenType::Identifier(name),
                 lexeme,
                 line,
                 position,
-            }) => Some(Identifier(
-                identifier.clone(),
+            }) => Some(self.create_identifier(
+                name.clone(),
                 DebugInfo {
                     line: *line,
                     position: *position,
@@ -605,6 +621,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<Vec<Statement>, Error> {
     let mut program = Vec::new();
     let mut parser = Parser {
         tokens,
+        identifier_counter: 0,
         current_index: 0,
         line: 0,
         position: 0,
@@ -707,9 +724,14 @@ fn test_fun_stmt() {
 
     let fun = parse(tokens).expect("expected valid tokens comprising valid function");
 
-    if let Some(Statement::Function { name, args, body }) = fun.get(0) {
-        assert_eq!(name.0, "funkcja");
-        assert_eq!(args.get(0).unwrap().0, "arg");
+    if let Some(Statement::Function {
+        name: identifier,
+        args,
+        body,
+    }) = fun.get(0)
+    {
+        assert_eq!(identifier.name, "funkcja");
+        assert_eq!(args.get(0).unwrap().name, "arg");
         match body.statements[..] {
             [Statement::Print(_)] => Ok(()),
             _ => Err(()),
@@ -734,7 +756,7 @@ fn test_call() {
                     debug_info: _,
                     args,
                 } => {
-                    assert_eq!(identifier.0, "funkcja");
+                    assert_eq!(identifier.name, "funkcja");
                     if let Expression::Identifier(_) = args.get(0).unwrap() {
                         Ok(())
                     } else {

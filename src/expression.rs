@@ -150,17 +150,27 @@ pub struct Unary {
 }
 
 #[derive(Debug, Clone)]
-pub struct Identifier(pub String, pub DebugInfo);
+pub struct IdentifierId(usize);
+
+impl IdentifierId {
+    pub fn from(num: usize) -> Self {
+        IdentifierId(num)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Identifier {
+    pub name: String,
+    pub debug_info: DebugInfo,
+    pub id: IdentifierId,
+}
 
 impl Identifier {
-    pub fn new(token: Token) -> Result<Identifier, Error> {
-        match &token.token_type {
-            TokenType::Identifier(name) => Ok(Self(name.clone(), DebugInfo::from(token))),
-            _ => Err(Error::ParsingError {
-                line: token.line,
-                position: token.position,
-                message: format!("Expected identifier token, found {:?}", token),
-            }),
+    pub fn from(name: String, id: usize, debug_info: DebugInfo) -> Identifier {
+        Identifier {
+            name,
+            id: IdentifierId::from(id),
+            debug_info,
         }
     }
 }

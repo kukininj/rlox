@@ -6,9 +6,9 @@ use crate::{
 };
 
 #[derive(Clone)]
-pub struct LoxFunction(Rc<dyn LoxFunction_>);
+pub struct FunObject(Rc<dyn LoxCallable>);
 
-impl LoxFunction {
+impl FunObject {
     pub fn call(
         &mut self,
         env: &mut Interpreter,
@@ -24,25 +24,25 @@ impl LoxFunction {
     }
 }
 
-impl fmt::Debug for LoxFunction {
+impl fmt::Debug for FunObject {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }
 
-impl fmt::Display for LoxFunction {
+impl fmt::Display for FunObject {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }
 
-impl PartialEq for LoxFunction {
+impl PartialEq for FunObject {
     fn eq(&self, other: &Self) -> bool {
         std::rc::Rc::ptr_eq(&self.0, &other.0)
     }
 }
 
-trait LoxFunction_ {
+trait LoxCallable {
     fn call(&self, env: &mut Interpreter, args: Box<[LoxValue]>) -> Result<LoxValue, Error>;
     fn arity(&self) -> usize;
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result;
@@ -65,7 +65,7 @@ impl ForeinFun {
     }
 }
 
-impl LoxFunction_ for ForeinFun {
+impl LoxCallable for ForeinFun {
     fn call(&self, env: &mut Interpreter, args: Box<[LoxValue]>) -> Result<LoxValue, Error> {
         if self.arity != args.len() {
             Err(Error::RuntimeError {
@@ -87,20 +87,20 @@ impl LoxFunction_ for ForeinFun {
     }
 }
 
-impl Into<LoxFunction> for ForeinFun {
-    fn into(self) -> LoxFunction {
-        LoxFunction(Rc::new(self))
+impl Into<FunObject> for ForeinFun {
+    fn into(self) -> FunObject {
+        FunObject(Rc::new(self))
     }
 }
 
 #[derive(Debug)]
-pub struct NativeFun {
+pub struct LoxFun {
     name: Identifier,
     args: Box<[Identifier]>,
     body: Block,
 }
 
-impl LoxFunction_ for NativeFun {
+impl LoxCallable for LoxFun {
     fn call(&self, env: &mut Interpreter, args: Box<[LoxValue]>) -> Result<LoxValue, Error> {
         if self.args.len() != args.len() {
             Err(Error::RuntimeError {
@@ -140,15 +140,15 @@ impl LoxFunction_ for NativeFun {
     }
 }
 
-impl NativeFun {
+impl LoxFun {
     pub(crate) fn new(name: Identifier, args: Box<[Identifier]>, body: Block) -> Self {
-        NativeFun { name, args, body }
+        LoxFun { name, args, body }
     }
 }
 
-impl Into<LoxFunction> for NativeFun {
-    fn into(self) -> LoxFunction {
-        LoxFunction(Rc::new(self))
+impl Into<FunObject> for LoxFun {
+    fn into(self) -> FunObject {
+        FunObject(Rc::new(self))
     }
 }
 
