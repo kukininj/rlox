@@ -149,14 +149,7 @@ pub struct Unary {
     pub right: Expression,
 }
 
-#[derive(Debug, Clone)]
-pub struct IdentifierId(usize);
-
-impl IdentifierId {
-    pub fn from(num: usize) -> Self {
-        IdentifierId(num)
-    }
-}
+pub type IdentifierId = usize;
 
 #[derive(Debug, Clone)]
 pub struct Identifier {

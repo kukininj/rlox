@@ -24,8 +24,8 @@ use crate::resolver::resolve;
 fn run(source: String) -> Result<(), Error> {
     let tokens = scanner::scan_tokens(&source)?;
     // println!("tokens: {:#?}", tokens);
-    let tree = parser::parse(tokens)?;
-    let access_table = resolve(&tree);
+    let (tree, parser_context) = parser::parse(tokens)?;
+    let access_table = resolve(&tree, parser_context);
     // println!("tree: {:#?}", tree);
     let mut interpreter = interpreter::Interpreter::new();
     let result = interpreter.execute(&tree, access_table);
@@ -48,7 +48,7 @@ fn main() {
                 match scanner::scan_tokens(&line) {
                     // TODO: parser teraz przechowuje ilość utworzonych identyfikatorów, trzeba wydzielić go do osobnego obiektu
                     Ok(tokens) => match parser::parse(tokens) {
-                        Ok(tree) => {
+                        Ok((tree, _)) => {
                             let result = interpreter.run(&tree);
                             println!("{:?}", result);
                         }

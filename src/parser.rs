@@ -2,6 +2,10 @@ use crate::scanner::from_slice;
 use crate::statement::{Block, Statement};
 use crate::{error::Error, expression::*, Token, TokenType};
 
+pub struct ParserContext {
+    pub identifier_counter: usize,
+}
+
 struct Parser {
     tokens: Vec<Token>,
 
@@ -615,9 +619,15 @@ impl Parser {
             _ => None,
         }
     }
+
+    fn get_context(&self) -> ParserContext {
+        ParserContext {
+            identifier_counter: self.identifier_counter,
+        }
+    }
 }
 
-pub fn parse(tokens: Vec<Token>) -> Result<Vec<Statement>, Error> {
+pub fn parse(tokens: Vec<Token>) -> Result<(Vec<Statement>, ParserContext), Error> {
     let mut program = Vec::new();
     let mut parser = Parser {
         tokens,
@@ -646,7 +656,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<Vec<Statement>, Error> {
     if let Some(error) = failed {
         Err(error)
     } else {
-        Ok(program)
+        Ok((program, parser.get_context()))
     }
 }
 

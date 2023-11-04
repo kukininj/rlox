@@ -46,7 +46,7 @@ impl Interpreter {
         statements: &Vec<Statement>,
         access_table: AccessTable,
     ) -> Result<(), Error> {
-        access_table.resolve(IdentifierId::from(0));
+        access_table.resolve(0);
         self.run(statements)
     }
 
