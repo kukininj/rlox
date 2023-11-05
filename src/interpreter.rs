@@ -268,7 +268,7 @@ impl Interpreter {
         let Identifier {
             name,
             debug_info: DebugInfo { line, position, .. },
-            id,
+            ..
         } = identifier;
         self.environment
             .get(name)
@@ -288,7 +288,7 @@ impl Interpreter {
         let Identifier {
             name,
             debug_info: DebugInfo { line, position, .. },
-            id,
+            ..
         } = target;
         self.environment
             .assign(&name, value)
@@ -320,26 +320,70 @@ impl Interpreter {
     }
 
     fn visit_call(self: &mut Self, call: &Call) -> Result<LoxValue, Error> {
-        let Call {
-            calle,
-            debug_info,
-            args,
-        } = call;
+        let Call { calle, args, .. } = call;
 
         let calle = self.evaluate(calle)?;
 
         match calle {
-            LoxValue::LoxFun(mut fun) => {
-                todo!()
+            LoxValue::LoxFun(fun) => {
+                let mut arg_values: Vec<LoxValue> = Vec::new();
+
+                for exp in args {
+                    arg_values.push(self.evaluate(exp)?);
+                }
+
+                if fun.arity() != args.len() {
+                    Err(self.error(format!(
+                        "Expected {} arguments, got {}.",
+                        fun.arity(),
+                        args.len()
+                    )))
+                } else {
+                    self.environment.push();
+                    for (identifier, value) in
+                        std::iter::zip(fun.args.into_iter(), arg_values.into_iter())
+                    {
+                        self.environment.define(identifier, value.clone())?;
+                    }
+                    let ret_value = match self.run(&fun.body.statements) {
+                        // napotkano Statement::Return podczas wykonywania funkcji
+                        Err(Error::Return { value }) => Ok(value.unwrap_or(LoxValue::Nil)),
+                        // ciało funkcji nie zawierało wyrażenia return, być może inne przypadki
+                        Ok(_) => Ok(LoxValue::Nil),
+                        // RuntimeError
+                        Err(e) => Err(e),
+                    };
+                    self.environment.pop();
+
+                    ret_value
+                }
             }
-            LoxValue::ForeinFun(mut fun) => {
-                todo!()
+            LoxValue::ForeinFun(fun) => {
+                let mut arg_values: Vec<LoxValue> = Vec::new();
+
+                for exp in args {
+                    arg_values.push(self.evaluate(exp)?);
+                }
+
+                if fun.arity() != args.len() {
+                    Err(self.error(format!(
+                        "Expected {} arguments, got {}.",
+                        fun.arity(),
+                        args.len()
+                    )))
+                } else {
+                    Ok((fun.fun)(self, arg_values.into_boxed_slice())?)
+                }
             }
-            _ => Err(Error::RuntimeError {
-                line: debug_info.line,
-                position: debug_info.position,
-                message: "Expected a function".to_owned(),
-            }),
+            _ => Err(self.error("Expected a function")),
+        }
+    }
+
+    fn error<S: Into<String>>(&self, message: S) -> Error {
+        Error::RuntimeError {
+            line: self.line,
+            position: self.position,
+            message: message.into(),
         }
     }
 }

@@ -6,9 +6,9 @@ use crate::{
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct ForeinFun {
-    name: String,
+    pub name: String,
     arity: usize,
-    fun: fn(&mut Interpreter, Box<[LoxValue]>) -> Result<LoxValue, Error>,
+    pub fun: fn(&mut Interpreter, Box<[LoxValue]>) -> Result<LoxValue, Error>,
 }
 
 impl ForeinFun {
@@ -28,24 +28,8 @@ impl core::fmt::Display for ForeinFun {
 }
 
 impl ForeinFun {
-    fn call(&self, env: &mut Interpreter, args: Box<[LoxValue]>) -> Result<LoxValue, Error> {
-        if self.arity != args.len() {
-            Err(Error::RuntimeError {
-                line: 0,
-                position: 0,
-                message: format!("Expected {} arguments, got {}.", self.arity, args.len()),
-            })
-        } else {
-            Ok((self.fun)(env, args)?)
-        }
-    }
-
-    fn arity(&self) -> usize {
+    pub fn arity(&self) -> usize {
         self.arity
-    }
-
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Debug::fmt(self, f)
     }
 }
 
@@ -63,37 +47,7 @@ impl fmt::Display for LoxFun {
 }
 
 impl LoxFun {
-    fn call(&self, env: &mut Interpreter, args: Box<[LoxValue]>) -> Result<LoxValue, Error> {
-        if self.args.len() != args.len() {
-            Err(Error::RuntimeError {
-                line: 0,
-                position: 0,
-                message: format!(
-                    "Expected {} arguments, got {}.",
-                    self.args.len(),
-                    args.len()
-                ),
-            })
-        } else {
-            env.environment.push();
-            for (identifier, value) in std::iter::zip(self.args.into_iter(), args.into_iter()) {
-                env.environment.define(identifier, value.clone())?;
-            }
-            let ret_value = match env.run(&self.body.statements) {
-                // napotkano Statement::Return podczas wykonywania funkcji
-                Err(Error::Return { value }) => Ok(value.unwrap_or(LoxValue::Nil)),
-                // ciało funkcji nie zawierało wyrażenia return, być może inne przypadki
-                Ok(_) => Ok(LoxValue::Nil),
-                // RuntimeError
-                Err(e) => Err(e),
-            };
-            env.environment.pop();
-
-            ret_value
-        }
-    }
-
-    fn arity(&self) -> usize {
+    pub fn arity(&self) -> usize {
         self.args.len()
     }
 }
