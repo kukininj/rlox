@@ -1,9 +1,11 @@
 use std::collections::HashMap;
+use std::num::NonZeroUsize;
 
 use crate::error::Error;
 use crate::expression::{DebugInfo, Identifier};
 use crate::lox_function::ForeinFun;
 use crate::lox_value::LoxValue;
+use crate::resolver::ScopeDepth;
 
 pub struct Variable {
     value: LoxValue,
@@ -43,7 +45,7 @@ impl Environment {
         Identifier {
             name,
             debug_info: debug,
-            id: _,
+            ..
         }: &Identifier,
         value: LoxValue,
     ) -> Result<(), Error> {
@@ -52,11 +54,10 @@ impl Environment {
             ..
         }) = self.head().values.get(name)
         {
-            // TODO: dont use `name` here, Variable should store its identifier
             Err(Error::RuntimeError {
                 line: debug.line,
                 position: debug.position,
-                message: format!("Variable {name} already declared at {line}:{position}!"),
+                message: format!("Variable {name} already defined at {line}:{position}!"),
             })
         } else {
             self.head().values.insert(
@@ -70,23 +71,47 @@ impl Environment {
         }
     }
 
-    pub fn get(&self, identifier: &String) -> Option<LoxValue> {
-        self.stack
-            .iter()
-            .rev()
-            .find_map(|frame| frame.values.get(identifier))
-            .map(|var| var.value.clone())
+    pub fn get(&self, identifier: &String, depth: Option<ScopeDepth>) -> Option<LoxValue> {
+        if let Some(depth) = depth {
+            self.stack
+                .iter()
+                .rev()
+                .nth(depth.get())
+                .and_then(|frame| frame.values.get(identifier))
+                .map(|var| var.value.clone())
+        } else {
+            self.stack
+                .first()
+                .and_then(|frame| frame.values.get(identifier))
+                .map(|var| var.value.clone())
+        }
     }
 
-    pub fn assign(&mut self, target: &String, value: LoxValue) -> Option<LoxValue> {
-        self.stack
-            .iter_mut()
-            .rev()
-            .find_map(|frame| frame.values.get_mut(target))
-            .map(|var| {
-                var.value = value.clone();
-                value
-            })
+    pub fn assign(
+        &mut self,
+        target: &String,
+        depth: Option<ScopeDepth>,
+        value: LoxValue,
+    ) -> Option<LoxValue> {
+        if let Some(depth) = depth {
+            self.stack
+                .iter_mut()
+                .rev()
+                .nth(depth.get())
+                .and_then(|frame| frame.values.get_mut(target))
+                .map(|var| {
+                    var.value = value.clone();
+                    value
+                })
+        } else {
+            self.stack
+                .first_mut()
+                .and_then(|frame| frame.values.get_mut(target))
+                .map(|var| {
+                    var.value = value.clone();
+                    value
+                })
+        }
     }
 }
 

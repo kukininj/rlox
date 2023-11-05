@@ -2,11 +2,7 @@ use crate::scanner::from_slice;
 use crate::statement::{Block, Statement};
 use crate::{error::Error, expression::*, Token, TokenType};
 
-pub struct ParserContext {
-    pub identifier_counter: usize,
-}
-
-struct Parser {
+pub struct Parser {
     tokens: Vec<Token>,
 
     identifier_counter: usize,
@@ -29,6 +25,46 @@ macro_rules! check_m {
 }
 
 impl Parser {
+    pub(crate) fn new() -> Self {
+        Parser {
+            tokens: Vec::new(),
+            identifier_counter: 0,
+            current_index: 0,
+            line: 0,
+            position: 0,
+        }
+    }
+
+    pub fn parse(&mut self, tokens: Vec<Token>) -> Result<Vec<Statement>, Error> {
+        self.tokens = tokens;
+        self.current_index = 0;
+        self.line = 0;
+        self.position = 0;
+        let mut program = Vec::new();
+        let mut failed = None;
+
+        while !self.is_at_end() {
+            match self.declaration() {
+                Ok(statement) => {
+                    program.push(statement);
+                }
+                Err(error) => {
+                    println!("Encountered Error while parsing: {:?}", error);
+                    if failed.is_none() {
+                        failed = Some(error);
+                    }
+                    self.synchronize();
+                }
+            }
+        }
+
+        if let Some(error) = failed {
+            Err(error)
+        } else {
+            Ok(program)
+        }
+    }
+
     fn current_token(&self) -> Option<&Token> {
         self.tokens.get(self.current_index)
     }
@@ -618,45 +654,6 @@ impl Parser {
             )),
             _ => None,
         }
-    }
-
-    fn get_context(&self) -> ParserContext {
-        ParserContext {
-            identifier_counter: self.identifier_counter,
-        }
-    }
-}
-
-pub fn parse(tokens: Vec<Token>) -> Result<(Vec<Statement>, ParserContext), Error> {
-    let mut program = Vec::new();
-    let mut parser = Parser {
-        tokens,
-        identifier_counter: 0,
-        current_index: 0,
-        line: 0,
-        position: 0,
-    };
-    let mut failed = None;
-
-    while !parser.is_at_end() {
-        match parser.declaration() {
-            Ok(statement) => {
-                program.push(statement);
-            }
-            Err(error) => {
-                println!("Encountered Error while parsing: {:?}", error);
-                if failed.is_none() {
-                    failed = Some(error);
-                }
-                parser.synchronize();
-            }
-        }
-    }
-
-    if let Some(error) = failed {
-        Err(error)
-    } else {
-        Ok((program, parser.get_context()))
     }
 }
 

@@ -45,7 +45,9 @@ impl Interpreter {
         statements: &Vec<Statement>,
         access_table: AccessTable,
     ) -> Result<(), Error> {
-        access_table.get(&0);
+        self.access_table
+            .add_all(access_table)
+            .map_err(|_| self.error("Error while updating access_table"))?;
         self.run(statements)
     }
 
@@ -268,10 +270,12 @@ impl Interpreter {
         let Identifier {
             name,
             debug_info: DebugInfo { line, position, .. },
-            ..
+            id,
         } = identifier;
+        let depth = self.access_table.get(id);
+
         self.environment
-            .get(name)
+            .get(name, depth)
             .ok_or_else(|| Error::RuntimeError {
                 line: *line,
                 position: *position,
@@ -285,13 +289,17 @@ impl Interpreter {
         value: &Expression,
     ) -> Result<LoxValue, Error> {
         let value = self.evaluate(&value)?;
+
         let Identifier {
             name,
             debug_info: DebugInfo { line, position, .. },
-            ..
+            id,
         } = target;
+
+        let depth = self.access_table.get(id);
+
         self.environment
-            .assign(&name, value)
+            .assign(&name, depth, value)
             .ok_or_else(|| Error::RuntimeError {
                 line: *line,
                 position: *position,

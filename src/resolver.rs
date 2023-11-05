@@ -3,16 +3,35 @@ use std::{collections::HashMap, num::NonZeroUsize};
 use crate::{
     error::Error,
     expression::{DebugInfo, Expression, Identifier, IdentifierId},
-    parser::ParserContext,
     statement::{Block, Statement},
 };
 
+/*
+pub enum IdentifierScope {
+    Global,
+    Local(NonZeroUsize),
+}
+*/
+
+#[derive(Clone, Copy)]
+pub struct ScopeDepth(NonZeroUsize);
+
+impl ScopeDepth {
+    pub fn get(&self) -> usize {
+        self.0.get() - 1
+    }
+
+    fn from(depth: usize, scope_size: usize) -> Option<ScopeDepth> {
+        NonZeroUsize::new(if depth == scope_size { 0 } else { depth + 1 })
+            .and_then(|v| Some(ScopeDepth(v)))
+    }
+}
+
 pub struct AccessTable {
-    access_table: HashMap<IdentifierId, NonZeroUsize>,
+    access_table: HashMap<IdentifierId, ScopeDepth>,
 }
 
 impl AccessTable {
-    // TODO: może zmienić nazę depth na level, po implementacji pobierania wartości z Environment
     pub fn empty() -> Self {
         Self {
             access_table: HashMap::new(),
@@ -23,12 +42,12 @@ impl AccessTable {
     /// look for a value of given IdentifierId,
     /// if id is not found, then identifier
     /// refers to a value in global scope
-    pub fn get(&self, id: &IdentifierId) -> Option<NonZeroUsize> {
+    pub fn get(&self, id: &IdentifierId) -> Option<ScopeDepth> {
         self.access_table.get(id).copied()
     }
 
     /// store the depth of scope at which to look for identifier `i`
-    fn put(&mut self, i: IdentifierId, depth: Option<NonZeroUsize>) -> Result<(), ()> {
+    fn put(&mut self, i: IdentifierId, depth: Option<ScopeDepth>) -> Result<(), ()> {
         if let Some(depth) = depth {
             if self.access_table.insert(i, depth).is_none() {
                 // identifier refers to an object in local scope
@@ -41,6 +60,13 @@ impl AccessTable {
             // identifier refers to an object in global scope
             Ok(())
         }
+    }
+
+    pub fn add_all(&mut self, other: AccessTable) -> Result<(), ()> {
+        for (id, depth) in other.access_table {
+            self.put(id, Some(depth))?;
+        }
+        Ok(())
     }
 }
 
@@ -115,11 +141,11 @@ impl Resolver {
     }
 
     fn resolve_local_identifier(&mut self, id: IdentifierId, name: String) -> Result<(), Error> {
-        for (i, scope) in self.scopes.iter().enumerate().rev() {
+        for (i, scope) in self.scopes.iter().rev().enumerate() {
             if scope.contains_key(&name) {
                 return self
                     .access_table
-                    .put(id, NonZeroUsize::new(i))
+                    .put(id, ScopeDepth::from(i, self.scopes.len()))
                     .map_err(|_| self.error("Tried to resolve the same identifier twice."));
             }
         }
@@ -236,7 +262,7 @@ impl Resolver {
     }
 }
 
-pub fn resolve(statements: &Vec<Statement>, parser_context: ParserContext) -> AccessTable {
+pub fn resolve(statements: &Vec<Statement>) -> Result<AccessTable, Error> {
     let mut resolver = Resolver {
         line: 0,
         position: 0,
@@ -244,7 +270,7 @@ pub fn resolve(statements: &Vec<Statement>, parser_context: ParserContext) -> Ac
         scopes: Vec::new(),
     };
 
-    resolver.resolve(statements).unwrap();
+    resolver.resolve(statements)?;
 
-    return resolver.access_table;
+    return Ok(resolver.access_table);
 }

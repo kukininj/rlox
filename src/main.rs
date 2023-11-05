@@ -19,16 +19,19 @@ use std::fs;
 use std::io;
 use std::io::Write;
 
+use crate::interpreter::Interpreter;
+use crate::parser::Parser;
 use crate::resolver::resolve;
 
 fn run(source: String) -> Result<(), Error> {
     let tokens = scanner::scan_tokens(&source)?;
     // println!("tokens: {:#?}", tokens);
-    let (tree, parser_context) = parser::parse(tokens)?;
-    let access_table = resolve(&tree, parser_context);
+    let mut parser = Parser::new();
+    let program = parser.parse(tokens)?;
+    let access_table = resolve(&program)?;
     // println!("tree: {:#?}", tree);
-    let mut interpreter = interpreter::Interpreter::new();
-    let result = interpreter.execute(&tree, access_table);
+    let mut interpreter = Interpreter::new();
+    let result = interpreter.execute(&program, access_table);
     println!("result: {:#?}", result);
 
     Ok(())
@@ -42,20 +45,18 @@ fn main() {
             let mut line = String::new();
             print!(" >> ");
             io::stdout().flush().unwrap();
-            let mut interpreter = interpreter::Interpreter::new();
+            let mut interpreter = Interpreter::new();
+            let mut parser = Parser::new();
 
             while let Ok(_) = io::stdin().read_line(&mut line) {
-                match scanner::scan_tokens(&line) {
-                    // TODO: parser teraz przechowuje ilość utworzonych identyfikatorów, trzeba wydzielić go do osobnego obiektu
-                    Ok(tokens) => match parser::parse(tokens) {
-                        Ok((tree, _)) => {
-                            let result = interpreter.run(&tree);
-                            println!("{:?}", result);
-                        }
-                        Err(error) => {
-                            println!("{:?}", error);
-                        }
-                    },
+                match scanner::scan_tokens(&line)
+                    .and_then(|tokens| parser.parse(tokens))
+                    .and_then(|program| Ok((resolve(&program)?, program)))
+                    .and_then(|(access_table, program)| interpreter.execute(&program, access_table))
+                {
+                    Ok(result) => {
+                        println!("{:?}", result);
+                    }
                     Err(error) => {
                         println!("{:?}", error);
                     }
