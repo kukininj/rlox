@@ -1,4 +1,3 @@
-use crate::scanner::from_slice;
 use crate::statement::{Block, Statement};
 use crate::{error::Error, expression::*, Token, TokenType};
 
@@ -674,9 +673,10 @@ fn test_statements() {
     let prnt = scanner::scan_tokens(&prnt.to_string());
     let varb = scanner::scan_tokens(&varb.to_string());
 
-    let _expr = parse(expr.unwrap()).unwrap();
-    let _prnt = parse(prnt.unwrap()).unwrap();
-    let _varb = parse(varb.unwrap()).unwrap();
+    let mut parser = Parser::new();
+    let _expr = parser.parse(expr.unwrap()).unwrap();
+    let _prnt = parser.parse(prnt.unwrap()).unwrap();
+    let _varb = parser.parse(varb.unwrap()).unwrap();
 }
 
 #[test]
@@ -705,7 +705,8 @@ fn test_parser() {
         debug_token!(TokenType::Eof, 11),
     ];
 
-    let expr = parse(tokens).unwrap();
+    let mut parser = Parser::new();
+    let expr = parser.parse(tokens).unwrap();
 
     let tokens = vec![
         debug_token!(TokenType::LeftParen, 0),
@@ -718,7 +719,7 @@ fn test_parser() {
         debug_token!(TokenType::Eof, 7),
     ];
 
-    let _ = parse(tokens).unwrap_err();
+    let _ = parser.parse(tokens).unwrap_err();
     println!("{:#?}", expr);
 }
 
@@ -729,7 +730,9 @@ fn test_fun_stmt() {
     let tokens =
         scan_tokens(&"fun funkcja(arg) {print arg;}".to_owned()).expect("expected valid string");
 
-    let fun = parse(tokens).expect("expected valid tokens comprising valid function");
+    let fun = Parser::new()
+        .parse(tokens)
+        .expect("expected valid tokens comprising valid function");
 
     if let Some(Statement::Function {
         name: identifier,
@@ -753,7 +756,9 @@ fn test_call() {
 
     let tokens = scan_tokens(&"funkcja(arg);".to_owned()).expect("expected valid string");
 
-    let call = parse(tokens).expect("expected valid tokens comprising valid function");
+    let call = Parser::new()
+        .parse(tokens)
+        .expect("expected valid tokens comprising valid function");
 
     if let Some(Statement::Expression(expr)) = call.get(0) {
         match expr {

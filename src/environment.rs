@@ -1,21 +1,22 @@
 use std::collections::HashMap;
-use std::num::NonZeroUsize;
 
 use crate::error::Error;
 use crate::expression::{DebugInfo, Identifier};
-use crate::lox_function::ForeinFun;
 use crate::lox_value::LoxValue;
 use crate::resolver::ScopeDepth;
 
+#[derive(Debug)]
 pub struct Variable {
     value: LoxValue,
     defined_at: DebugInfo,
 }
 
+#[derive(Debug)]
 pub struct Environment {
     stack: Vec<Frame>,
 }
 
+#[derive(Debug)]
 pub struct Frame {
     pub values: HashMap<String, Variable>,
 }
@@ -126,11 +127,14 @@ impl Frame {
 #[test]
 fn test_function_call() {
     use crate::interpreter::Interpreter;
-    use crate::parser;
+    use crate::lox_function::ForeinFun;
+    use crate::parser::Parser;
+    use crate::resolver;
     use crate::scanner;
     let source = concat!("var a = test(123);",).to_string();
     let tokens = scanner::scan_tokens(&source).unwrap();
-    let tree = parser::parse(tokens).unwrap();
+    let tree = Parser::new().parse(tokens).unwrap();
+    let access_table = resolver::resolve(&tree).unwrap();
     let mut interp = Interpreter::new();
 
     let global_identifier = Identifier {
@@ -156,13 +160,13 @@ fn test_function_call() {
 
     interp
         .environment
-        .define(&global_identifier, LoxValue::Function(fun.into()))
+        .define(&global_identifier, LoxValue::ForeinFun(fun.into()))
         .unwrap();
 
-    interp.run(&tree).unwrap();
+    interp.execute(&tree, access_table).unwrap();
     let val = interp
         .environment
-        .get(&"a".to_string())
+        .get(&"a".to_string(), None)
         .expect("Expected variable `a` to be defined.");
 
     assert_eq!(val, LoxValue::String("(123)".to_owned()));

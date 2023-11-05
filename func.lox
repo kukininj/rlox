@@ -1,0 +1,5 @@
+fun test(arg) {
+    return arg;
+}
+
+print test(1234);

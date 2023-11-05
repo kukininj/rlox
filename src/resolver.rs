@@ -13,7 +13,7 @@ pub enum IdentifierScope {
 }
 */
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct ScopeDepth(NonZeroUsize);
 
 impl ScopeDepth {
@@ -21,9 +21,13 @@ impl ScopeDepth {
         self.0.get() - 1
     }
 
-    fn from(depth: usize, scope_size: usize) -> Option<ScopeDepth> {
-        NonZeroUsize::new(if depth == scope_size { 0 } else { depth + 1 })
-            .and_then(|v| Some(ScopeDepth(v)))
+    fn from(depth: usize, number_of_parent_scopes: usize) -> Option<ScopeDepth> {
+        NonZeroUsize::new(if depth == number_of_parent_scopes {
+            0
+        } else {
+            depth + 1
+        })
+        .and_then(|v| Some(ScopeDepth(v)))
     }
 }
 
@@ -187,7 +191,7 @@ impl Resolver {
             self.declare(&arg.name)?;
             self.define(&arg.name)?;
         }
-        self.visit_block(body)?;
+        self.resolve(&body.statements)?;
         self.scopes.pop();
         Ok(())
     }

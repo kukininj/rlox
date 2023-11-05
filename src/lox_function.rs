@@ -60,16 +60,18 @@ impl LoxFun {
 
 #[test]
 fn test_fun_stmt() {
-    use crate::parser;
+    use crate::parser::Parser;
+    use crate::resolver;
     use crate::scanner;
     let source = concat!("fun funkcja(arg) {return arg;}", "var a = funkcja(123);",).to_string();
     let tokens = scanner::scan_tokens(&source).unwrap();
-    let tree = parser::parse(tokens).unwrap();
+    let tree = Parser::new().parse(tokens).unwrap();
+    let access_table = resolver::resolve(&tree).unwrap();
     let mut interp = Interpreter::new();
-    interp.run(&tree).unwrap();
+    interp.execute(&tree, access_table).unwrap();
     let val = interp
         .environment
-        .get(&"a".to_string())
+        .get(&"a".to_string(), None)
         .expect("Expected variable `a` to be defined.");
 
     // TODO: fix when return statements implemented

@@ -1,5 +1,3 @@
-use std::mem::discriminant;
-
 use crate::{
     error::Error,
     lox_function::{ForeinFun, LoxFun},
@@ -167,7 +165,8 @@ impl LoxValue {
 #[test]
 fn comparison_tests() {
     use crate::interpreter::Interpreter;
-    use crate::parser;
+    use crate::parser::Parser;
+    use crate::resolver;
     use crate::scanner;
     for (source, expected) in [
         ("1<2;", true),
@@ -183,8 +182,9 @@ fn comparison_tests() {
         ("!!(\"asdf\"==\"asdf\");", true),
     ] {
         let tokens = scanner::scan_tokens(&source.to_string()).unwrap();
-        let tree = parser::parse(tokens).unwrap();
+        let tree = Parser::new().parse(tokens).unwrap();
+        let access_table = resolver::resolve(&tree).unwrap();
         let mut interp = Interpreter::new();
-        interp.run(&tree).unwrap();
+        interp.execute(&tree, access_table).unwrap();
     }
 }

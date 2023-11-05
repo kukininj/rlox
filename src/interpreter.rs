@@ -51,7 +51,7 @@ impl Interpreter {
         self.run(statements)
     }
 
-    pub fn run(self: &mut Self, statements: &Vec<Statement>) -> Result<(), Error> {
+    fn run(self: &mut Self, statements: &Vec<Statement>) -> Result<(), Error> {
         for stmt in statements {
             match stmt {
                 Statement::Nop => {}
@@ -60,7 +60,7 @@ impl Interpreter {
                 }
                 Statement::Print(expr) => {
                     let value = self.evaluate(expr)?;
-                    println!("{}", value);
+                    println!("{}", LoxValue::to_string(&value));
                 }
                 Statement::Variable {
                     name,
@@ -398,11 +398,11 @@ impl Interpreter {
 
 #[test]
 fn runtime_error_string_negation() {
-    use crate::parser;
+    use crate::parser::Parser;
     use crate::scanner;
     let source = "-\"asdf\";".to_string();
     let tokens = scanner::scan_tokens(&source).unwrap();
-    let tree = parser::parse(tokens).unwrap();
+    let tree = Parser::new().parse(tokens).unwrap();
     let mut interp = Interpreter::new();
     if let Error::RuntimeError {
         line,
@@ -418,27 +418,31 @@ fn runtime_error_string_negation() {
 
 #[test]
 fn basic_arithmetics() {
-    use crate::parser;
+    use crate::parser::Parser;
+    use crate::resolver;
     use crate::scanner;
     let source = "print 2 + 2 * 2 / (3-2) * 1;".to_string();
     let tokens = scanner::scan_tokens(&source).unwrap();
-    let tree = parser::parse(tokens).unwrap();
+    let tree = Parser::new().parse(tokens).unwrap();
+    let access_table = resolver::resolve(&tree).unwrap();
     let mut interp = Interpreter::new();
-    interp.run(&tree).unwrap();
+    interp.execute(&tree, access_table).unwrap();
 }
 
 #[test]
 fn variables() {
-    use crate::parser;
+    use crate::parser::Parser;
+    use crate::resolver;
     use crate::scanner;
     let source = "var a = 1; a = a +2;".to_string();
     let tokens = scanner::scan_tokens(&source).unwrap();
-    let tree = parser::parse(tokens).unwrap();
+    let tree = Parser::new().parse(tokens).unwrap();
+    let access_table = resolver::resolve(&tree).unwrap();
     let mut interp = Interpreter::new();
-    interp.run(&tree).unwrap();
+    interp.execute(&tree, access_table).unwrap();
     let val = interp
         .environment
-        .get(&"a".to_string())
+        .get(&"a".to_string(), None)
         .expect("Expected variable `a` to be defined.");
 
     assert_eq!(val, LoxValue::Number(3.));
@@ -446,7 +450,8 @@ fn variables() {
 
 #[test]
 fn loops() {
-    use crate::parser;
+    use crate::parser::Parser;
+    use crate::resolver;
     use crate::scanner;
     let source = concat!(
         "var a = 1;",
@@ -454,13 +459,15 @@ fn loops() {
         "{a = a+2;}"
     )
     .to_string();
+    let mut parser = Parser::new();
     let tokens = scanner::scan_tokens(&source).unwrap();
-    let tree = parser::parse(tokens).unwrap();
+    let program = parser.parse(tokens).unwrap();
+    let access_table = resolver::resolve(&program).unwrap();
     let mut interp = Interpreter::new();
-    interp.run(&tree).unwrap();
+    interp.execute(&program, access_table).unwrap();
     let val = interp
         .environment
-        .get(&"a".to_string())
+        .get(&"a".to_string(), None)
         .expect("Expected variable `a` to be defined.");
 
     assert_eq!(val, LoxValue::Number(21.));
