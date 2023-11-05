@@ -228,6 +228,7 @@ impl Resolver {
                 Ok(())
             }
             Expression::Call(call) => {
+                self.visit_expression(&call.calle)?;
                 for arg in &call.args {
                     self.visit_expression(&arg)?;
                 }
@@ -277,4 +278,60 @@ pub fn resolve(statements: &Vec<Statement>) -> Result<AccessTable, Error> {
     resolver.resolve(statements)?;
 
     return Ok(resolver.access_table);
+}
+
+#[test]
+fn test_resolver() {
+    use crate::interpreter::Interpreter;
+    use crate::lox_function::ForeinFun;
+    use crate::lox_value::LoxValue;
+    use crate::parser::Parser;
+    use crate::resolver;
+    use crate::scanner;
+    let source = concat!(
+        "var a = \"global\";",
+        "{",
+        "fun local_fun() {test(a);}",
+        "local_fun();",
+        "var a = \"local\";",
+        "local_fun();",
+        "}"
+    )
+    .to_string();
+
+    let tokens = scanner::scan_tokens(&source).unwrap();
+    let tree = Parser::new().parse(tokens).unwrap();
+    let access_table = resolver::resolve(&tree).unwrap();
+    let mut interp = Interpreter::new();
+
+    let global_identifier = Identifier {
+        name: "test".to_owned(),
+        id: 0,
+        debug_info: DebugInfo {
+            line: 0,
+            position: 0,
+            lexeme: "<native test>".to_owned(),
+        },
+    };
+
+    static mut VALUES_OF_A: Vec<String> = Vec::new();
+    fn test(_env: &mut Interpreter, args: Box<[LoxValue]>) -> Result<LoxValue, Error> {
+        unsafe {
+            VALUES_OF_A.push(args[0].to_string());
+        }
+        Ok(LoxValue::Nil)
+    }
+
+    let fun = ForeinFun::new("test".to_owned(), 1, test);
+
+    interp
+        .environment
+        .define(&global_identifier, LoxValue::ForeinFun(fun.into()))
+        .unwrap();
+
+    interp.execute(&tree, access_table).unwrap();
+
+    unsafe {
+        assert_eq!(VALUES_OF_A, ["global", "global"]);
+    }
 }

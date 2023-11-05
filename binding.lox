@@ -1,0 +1,9 @@
+var a = "global";
+{
+    fun local_fun() {
+        print a;
+    }
+    local_fun();
+    var a = "global";
+    local_fun();
+}
