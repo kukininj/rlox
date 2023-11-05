@@ -1,54 +1,10 @@
 use core::fmt;
-use std::rc::Rc;
 
 use crate::{
     expression::Identifier, interpreter::Interpreter, lox_value::LoxValue, statement::Block, Error,
 };
 
-#[derive(Clone)]
-pub struct FunObject(Rc<dyn LoxCallable>);
-
-impl FunObject {
-    pub fn call(
-        &mut self,
-        env: &mut Interpreter,
-        args: Box<[LoxValue]>,
-    ) -> Result<LoxValue, Error> {
-        self.0.call(env, args)
-    }
-    pub fn arity(&self) -> usize {
-        self.0.arity()
-    }
-    pub fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl fmt::Debug for FunObject {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl fmt::Display for FunObject {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl PartialEq for FunObject {
-    fn eq(&self, other: &Self) -> bool {
-        std::rc::Rc::ptr_eq(&self.0, &other.0)
-    }
-}
-
-trait LoxCallable {
-    fn call(&self, env: &mut Interpreter, args: Box<[LoxValue]>) -> Result<LoxValue, Error>;
-    fn arity(&self) -> usize;
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result;
-}
-
-#[derive(Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct ForeinFun {
     name: String,
     arity: usize,
@@ -65,7 +21,13 @@ impl ForeinFun {
     }
 }
 
-impl LoxCallable for ForeinFun {
+impl core::fmt::Display for ForeinFun {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self, f)
+    }
+}
+
+impl ForeinFun {
     fn call(&self, env: &mut Interpreter, args: Box<[LoxValue]>) -> Result<LoxValue, Error> {
         if self.arity != args.len() {
             Err(Error::RuntimeError {
@@ -87,20 +49,20 @@ impl LoxCallable for ForeinFun {
     }
 }
 
-impl Into<FunObject> for ForeinFun {
-    fn into(self) -> FunObject {
-        FunObject(Rc::new(self))
+#[derive(Debug)]
+pub struct LoxFun {
+    pub name: Identifier,
+    pub args: Box<[Identifier]>,
+    pub body: Block,
+}
+
+impl fmt::Display for LoxFun {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self, f)
     }
 }
 
-#[derive(Debug)]
-pub struct LoxFun {
-    name: Identifier,
-    args: Box<[Identifier]>,
-    body: Block,
-}
-
-impl LoxCallable for LoxFun {
+impl LoxFun {
     fn call(&self, env: &mut Interpreter, args: Box<[LoxValue]>) -> Result<LoxValue, Error> {
         if self.args.len() != args.len() {
             Err(Error::RuntimeError {
@@ -134,21 +96,11 @@ impl LoxCallable for LoxFun {
     fn arity(&self) -> usize {
         self.args.len()
     }
-
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Debug::fmt(self, f)
-    }
 }
 
 impl LoxFun {
     pub(crate) fn new(name: Identifier, args: Box<[Identifier]>, body: Block) -> Self {
         LoxFun { name, args, body }
-    }
-}
-
-impl Into<FunObject> for LoxFun {
-    fn into(self) -> FunObject {
-        FunObject(Rc::new(self))
     }
 }
 

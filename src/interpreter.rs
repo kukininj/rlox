@@ -7,7 +7,6 @@ use crate::expression::DebugInfo;
 use crate::expression::Expression;
 use crate::expression::Grouping;
 use crate::expression::Identifier;
-use crate::expression::IdentifierId;
 use crate::expression::LiteralValue;
 use crate::expression::Logical;
 use crate::expression::LogicalOperator;
@@ -46,7 +45,7 @@ impl Interpreter {
         statements: &Vec<Statement>,
         access_table: AccessTable,
     ) -> Result<(), Error> {
-        access_table.resolve(0);
+        access_table.get(&0);
         self.run(statements)
     }
 
@@ -94,7 +93,7 @@ impl Interpreter {
                     }
                 }
                 Statement::Function { name, args, body } => {
-                    self.define_function(name, args, body)?
+                    self.define_function(name, args, body)?;
                 }
                 Statement::Return { value } => {
                     let value = if let Some(v) = value {
@@ -124,7 +123,7 @@ impl Interpreter {
     ) -> Result<(), Error> {
         let lox_function = LoxFun::new(name.clone(), args.clone().into_boxed_slice(), body.clone());
         self.environment
-            .define(name, LoxValue::Function(lox_function.into()))?;
+            .define(name, LoxValue::LoxFun(lox_function.into()))?;
         Ok(())
     }
 
@@ -328,15 +327,13 @@ impl Interpreter {
         } = call;
 
         let calle = self.evaluate(calle)?;
+
         match calle {
-            LoxValue::Function(mut fun) => {
-                let mut arg_values: Vec<LoxValue> = Vec::new();
-
-                for exp in args {
-                    arg_values.push(self.evaluate(exp)?);
-                }
-
-                return fun.call(self, arg_values.into_boxed_slice());
+            LoxValue::LoxFun(mut fun) => {
+                todo!()
+            }
+            LoxValue::ForeinFun(mut fun) => {
+                todo!()
             }
             _ => Err(Error::RuntimeError {
                 line: debug_info.line,

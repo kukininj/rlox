@@ -1,13 +1,39 @@
-use crate::{error::Error, lox_function::FunObject};
+use std::mem::discriminant;
 
-#[derive(PartialEq, Clone, Debug)]
+use crate::{
+    error::Error,
+    lox_function::{ForeinFun, LoxFun},
+};
+use std::rc::Rc;
+
+#[derive(Clone, Debug)]
 pub enum LoxValue {
     Number(f64),
     Bool(bool),
     String(String),
     // Object(LoxObject),
-    Function(FunObject),
+    LoxFun(Rc<LoxFun>),
+    ForeinFun(Rc<ForeinFun>),
     Nil,
+}
+
+impl PartialEq for LoxValue {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (LoxValue::Number(a), LoxValue::Number(b)) => a == b,
+            (LoxValue::Number(_), _) => false,
+            (LoxValue::Bool(a), LoxValue::Bool(b)) => a == b,
+            (LoxValue::Bool(_), _) => false,
+            (LoxValue::String(a), LoxValue::String(b)) => a == b,
+            (LoxValue::String(_), _) => false,
+            (LoxValue::LoxFun(a), LoxValue::LoxFun(b)) => Rc::ptr_eq(a, b),
+            (LoxValue::LoxFun(_), _) => false,
+            (LoxValue::ForeinFun(a), LoxValue::ForeinFun(b)) => Rc::ptr_eq(a, b),
+            (LoxValue::ForeinFun(_), _) => false,
+            (LoxValue::Nil, LoxValue::Nil) => true,
+            (LoxValue::Nil, _) => false,
+        }
+    }
 }
 
 impl core::fmt::Display for LoxValue {
@@ -18,7 +44,8 @@ impl core::fmt::Display for LoxValue {
             LoxValue::String(s) => write!(f, "{}", s),
             // LoxValue::Object(o) => write!(f, "{}", o.to_string()),
             LoxValue::Nil => write!(f, "nil"),
-            LoxValue::Function(fun) => write!(f, "{}", fun),
+            LoxValue::LoxFun(fun) => write!(f, "{}", fun),
+            LoxValue::ForeinFun(fun) => write!(f, "{}", fun),
         }
     }
 }
@@ -63,7 +90,7 @@ impl LoxValue {
         }
     }
 
-    // Follows IEEE 754, ie: (NaN == NaN): False
+    // Follows IEEE 754, ie: (NaN == NaN) -> False
     pub fn equal(left: LoxValue, right: LoxValue) -> Result<LoxValue, Error> {
         Ok(LoxValue::Bool(left == right))
     }
@@ -130,8 +157,9 @@ impl LoxValue {
             LoxValue::Number(n) => n.to_string(),
             LoxValue::Bool(b) => b.to_string(),
             LoxValue::String(s) => s.clone(),
-            LoxValue::Function(f) => f.to_string(),
             LoxValue::Nil => "nil".to_owned(),
+            LoxValue::LoxFun(f) => f.to_string(),
+            LoxValue::ForeinFun(f) => f.to_string(),
         }
     }
 }
