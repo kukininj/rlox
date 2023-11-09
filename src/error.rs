@@ -35,9 +35,6 @@ pub enum Error {
         position: usize,
         message: String,
     },
-    Return {
-        value: Option<LoxValue>,
-    },
     ResolverError {
         line: usize,
         position: usize,

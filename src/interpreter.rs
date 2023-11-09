@@ -25,6 +25,12 @@ pub struct Interpreter {
     pub access_table: AccessTable,
 }
 
+#[derive(Debug)]
+pub enum LoxResult {
+    Return(LoxValue),
+    None,
+}
+
 impl Interpreter {
     pub fn new() -> Self {
         Interpreter {
@@ -44,14 +50,14 @@ impl Interpreter {
         &mut self,
         statements: &Vec<Statement>,
         access_table: AccessTable,
-    ) -> Result<(), Error> {
+    ) -> Result<LoxResult, Error> {
         self.access_table
             .add_all(access_table)
             .map_err(|_| self.error("Error while updating access_table"))?;
         self.run(statements)
     }
 
-    fn run(self: &mut Self, statements: &Vec<Statement>) -> Result<(), Error> {
+    fn run(self: &mut Self, statements: &Vec<Statement>) -> Result<LoxResult, Error> {
         for stmt in statements {
             match stmt {
                 Statement::Nop => {}
@@ -97,24 +103,24 @@ impl Interpreter {
                 Statement::Function { name, args, body } => {
                     self.define_function(name, args, body)?;
                 }
+                Statement::Return { value: Some(value) } => {
+                    let value = self.evaluate(value)?;
+
+                    return Ok(LoxResult::Return(value));
+                }
                 Statement::Return { value } => {
-                    let value = if let Some(v) = value {
-                        Some(self.evaluate(v)?)
-                    } else {
-                        None
-                    };
-                    return Err(Error::Return { value });
+                    return Ok(LoxResult::Return(LoxValue::Nil));
                 }
             };
         }
-        Ok(())
+        Ok(LoxResult::None)
     }
 
-    pub fn run_block(&mut self, block: &Block) -> Result<(), Error> {
+    pub fn run_block(&mut self, block: &Block) -> Result<LoxResult, Error> {
         self.environment.push();
-        self.run(&block.statements)?;
+        let result = self.run(&block.statements);
         self.environment.pop();
-        Ok(())
+        result
     }
 
     pub fn define_function(
@@ -355,9 +361,9 @@ impl Interpreter {
                     }
                     let ret_value = match self.run(&fun.body.statements) {
                         // napotkano Statement::Return podczas wykonywania funkcji
-                        Err(Error::Return { value }) => Ok(value.unwrap_or(LoxValue::Nil)),
+                        Ok(LoxResult::Return(value)) => Ok(value),
                         // ciało funkcji nie zawierało wyrażenia return, być może inne przypadki
-                        Ok(_) => Ok(LoxValue::Nil),
+                        Ok(LoxResult::None) => Ok(LoxValue::Nil),
                         // RuntimeError
                         Err(e) => Err(e),
                     };
