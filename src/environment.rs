@@ -1,4 +1,8 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::mem;
+use std::num::NonZeroUsize;
+use std::rc::Rc;
 
 use crate::error::Error;
 use crate::expression::{DebugInfo, Identifier};
@@ -14,31 +18,68 @@ pub struct Variable {
 #[derive(Debug)]
 pub struct Environment {
     stack: Vec<Frame>,
+    head: u32,
 }
 
 #[derive(Debug)]
 pub struct Frame {
     pub values: HashMap<String, Variable>,
+    pub parent: Option<u32>,
+}
+
+pub struct FrameIterator<'env> {
+    environment: &'env mut [Frame],
+    current_item: Option<u32>,
+}
+
+impl<'env> Iterator for FrameIterator<'env> {
+    type Item = &'env mut Frame;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let env = mem::replace(&mut self.environment, &mut []);
+        if let Some(current_item) = self.current_item {
+            let (head, tail) = env.split_at_mut(current_item as usize);
+            let item = tail.first_mut().expect("");
+            self.environment = head;
+            self.current_item = item.parent;
+            Some(item)
+        } else {
+            None
+        }
+    }
 }
 
 impl Environment {
     pub fn new() -> Self {
         Environment {
             stack: vec![Frame::new()],
+            head: 0,
         }
     }
 
     pub fn push(&mut self) {
-        self.stack.push(Frame::new());
+        self.stack.push(Frame::with_parent(self.head));
+        self.head = self.stack.len() as u32 - 1;
     }
 
-    pub fn pop(&mut self) {
-        self.stack.pop();
+    pub fn pop(&mut self) -> Result<(), ()> {
+        if let Some(parent) = self.head().parent {
+            self.head = parent;
+            Ok(())
+        } else {
+            Err(())
+        }
     }
 
     pub fn head(&mut self) -> &mut Frame {
-        let index = self.stack.len() - 1;
-        self.stack.get_mut(index).unwrap()
+        self.stack.get_mut(self.head as usize).unwrap()
+    }
+
+    fn parent_scope_iterator(&mut self) -> impl Iterator<Item = &mut Frame> + '_ {
+        FrameIterator {
+            environment: &mut self.stack,
+            current_item: Some(self.head),
+        }
     }
 
     pub fn define(
@@ -72,11 +113,9 @@ impl Environment {
         }
     }
 
-    pub fn get(&self, identifier: &String, depth: Option<ScopeDepth>) -> Option<LoxValue> {
+    pub fn get(&mut self, identifier: &String, depth: Option<ScopeDepth>) -> Option<LoxValue> {
         if let Some(depth) = depth {
-            self.stack
-                .iter()
-                .rev()
+            self.parent_scope_iterator()
                 .nth(depth.get())
                 .and_then(|frame| frame.values.get(identifier))
                 .map(|var| var.value.clone())
@@ -95,9 +134,7 @@ impl Environment {
         value: LoxValue,
     ) -> Option<LoxValue> {
         if let Some(depth) = depth {
-            self.stack
-                .iter_mut()
-                .rev()
+            self.parent_scope_iterator()
                 .nth(depth.get())
                 .and_then(|frame| frame.values.get_mut(target))
                 .map(|var| {
@@ -120,7 +157,23 @@ impl Frame {
     pub fn new() -> Frame {
         Frame {
             values: HashMap::new(),
+            parent: None,
         }
+    }
+
+    pub fn with_parent(parent: u32) -> Frame {
+        Frame {
+            values: HashMap::new(),
+            parent: Some(parent),
+        }
+    }
+}
+
+impl Iterator for Frame {
+    type Item = Frame;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        todo!()
     }
 }
 

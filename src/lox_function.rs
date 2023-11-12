@@ -78,3 +78,37 @@ fn test_fun_stmt() {
     assert_eq!(val, LoxValue::Number(123.));
     // assert_eq!(val, LoxValue::Nil);
 }
+
+#[test]
+fn test_closure_capturing() {
+    use crate::interpreter::Interpreter;
+    use crate::lox_function::ForeinFun;
+    use crate::lox_value::LoxValue;
+    use crate::parser::Parser;
+    use crate::resolver;
+    use crate::scanner;
+    let source = vec![
+        "fun funkcja() {",
+        "    var a = \"123\";",
+        "    fun local_fun() {print a;}",
+        "    return local_fun;",
+        "}",
+        "var a = (funkcja())();",
+    ]
+    .join("\n");
+
+    let tokens = scanner::scan_tokens(&source).unwrap();
+    let tree = Parser::new().parse(tokens).unwrap();
+    let access_table = resolver::resolve(&tree).unwrap();
+    let mut interp = Interpreter::new();
+
+    interp.execute(&tree, access_table).unwrap();
+
+    let val = interp
+        .environment
+        .get(&"a".to_string(), None)
+        .expect("Expected variable `a` to be defined.");
+
+    // TODO: fix when return statements implemented
+    assert_eq!(val, LoxValue::Number(123.));
+}
