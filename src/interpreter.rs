@@ -108,7 +108,7 @@ impl Interpreter {
 
                     return Ok(LoxResult::Return(value));
                 }
-                Statement::Return { value } => {
+                Statement::Return { value: None } => {
                     return Ok(LoxResult::Return(LoxValue::Nil));
                 }
             };

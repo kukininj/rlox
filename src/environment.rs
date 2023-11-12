@@ -1,8 +1,4 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::mem;
-use std::num::NonZeroUsize;
-use std::rc::Rc;
 
 use crate::error::Error;
 use crate::expression::{DebugInfo, Identifier};
@@ -17,7 +13,7 @@ pub struct Variable {
 
 #[derive(Debug)]
 pub struct Environment {
-    stack: Vec<Frame>,
+    stack: HashMap<u32, Frame>,
     head: u32,
 }
 
@@ -27,59 +23,48 @@ pub struct Frame {
     pub parent: Option<u32>,
 }
 
-pub struct FrameIterator<'env> {
-    environment: &'env mut [Frame],
-    current_item: Option<u32>,
-}
-
-impl<'env> Iterator for FrameIterator<'env> {
-    type Item = &'env mut Frame;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let env = mem::replace(&mut self.environment, &mut []);
-        if let Some(current_item) = self.current_item {
-            let (head, tail) = env.split_at_mut(current_item as usize);
-            let item = tail.first_mut().expect("");
-            self.environment = head;
-            self.current_item = item.parent;
-            Some(item)
-        } else {
-            None
-        }
-    }
-}
-
 impl Environment {
     pub fn new() -> Self {
         Environment {
-            stack: vec![Frame::new()],
+            stack: HashMap::from([(0, Frame::new())]),
             head: 0,
         }
     }
 
     pub fn push(&mut self) {
-        self.stack.push(Frame::with_parent(self.head));
-        self.head = self.stack.len() as u32 - 1;
+        let parent = self.head;
+        self.head = self.stack.len() as u32;
+        self.stack.insert(self.head, Frame::with_parent(parent));
     }
 
-    pub fn pop(&mut self) -> Result<(), ()> {
-        if let Some(parent) = self.head().parent {
-            self.head = parent;
-            Ok(())
-        } else {
-            Err(())
-        }
+    pub fn pop(&mut self) {
+        self.head = self
+            .head()
+            .parent
+            .expect("tried to get parent of global scope");
     }
 
     pub fn head(&mut self) -> &mut Frame {
-        self.stack.get_mut(self.head as usize).unwrap()
+        self.stack.get_mut(&self.head).unwrap()
     }
 
-    fn parent_scope_iterator(&mut self) -> impl Iterator<Item = &mut Frame> + '_ {
-        FrameIterator {
-            environment: &mut self.stack,
-            current_item: Some(self.head),
+    pub fn global(&mut self) -> &mut Frame {
+        self.stack.get_mut(&0).unwrap()
+    }
+
+    fn get_nth_scope(&mut self, n: usize) -> &mut Frame {
+        let mut nth_scope = self.head;
+
+        for _ in 0..n {
+            nth_scope = self
+                .stack
+                .get_mut(&nth_scope)
+                .expect("found invalid scope identifier")
+                .parent
+                .expect("tried to get parent scope of global scope");
         }
+
+        return self.stack.get_mut(&nth_scope).unwrap();
     }
 
     pub fn define(
@@ -115,14 +100,14 @@ impl Environment {
 
     pub fn get(&mut self, identifier: &String, depth: Option<ScopeDepth>) -> Option<LoxValue> {
         if let Some(depth) = depth {
-            self.parent_scope_iterator()
-                .nth(depth.get())
-                .and_then(|frame| frame.values.get(identifier))
+            self.get_nth_scope(depth.get())
+                .values
+                .get(identifier)
                 .map(|var| var.value.clone())
         } else {
-            self.stack
-                .first()
-                .and_then(|frame| frame.values.get(identifier))
+            self.global()
+                .values
+                .get(identifier)
                 .map(|var| var.value.clone())
         }
     }
@@ -134,21 +119,18 @@ impl Environment {
         value: LoxValue,
     ) -> Option<LoxValue> {
         if let Some(depth) = depth {
-            self.parent_scope_iterator()
-                .nth(depth.get())
-                .and_then(|frame| frame.values.get_mut(target))
+            self.get_nth_scope(depth.get())
+                .values
+                .get_mut(target)
                 .map(|var| {
                     var.value = value.clone();
                     value
                 })
         } else {
-            self.stack
-                .first_mut()
-                .and_then(|frame| frame.values.get_mut(target))
-                .map(|var| {
-                    var.value = value.clone();
-                    value
-                })
+            self.global().values.get_mut(target).map(|var| {
+                var.value = value.clone();
+                value
+            })
         }
     }
 }
@@ -223,4 +205,41 @@ fn test_function_call() {
         .expect("Expected variable `a` to be defined.");
 
     assert_eq!(val, LoxValue::String("(123)".to_owned()));
+}
+
+#[test]
+fn test_closure_capturing() {
+    use crate::interpreter::Interpreter;
+    use crate::lox_value::LoxValue;
+    use crate::parser::Parser;
+    use crate::resolver;
+    use crate::scanner;
+    let source = vec![
+        "fun funkcja() {",
+        "    var a = 123;",
+        "    print a;",
+        "    fun local_fun() {",
+        "        print a;",
+        "    }",
+        "    return local_fun;",
+        "}",
+        "var a = (funkcja())();",
+    ]
+    .join("\n");
+
+    let tokens = scanner::scan_tokens(&source).unwrap();
+    let tree = Parser::new().parse(tokens).unwrap();
+    let access_table = resolver::resolve(&tree).unwrap();
+    // panic!("{:?}", access_table);
+    let mut interp = Interpreter::new();
+
+    interp.execute(&tree, access_table).unwrap();
+
+    let val = interp
+        .environment
+        .get(&"a".to_string(), None)
+        .expect("Expected variable `a` to be defined.");
+
+    // TODO: fix when return statements implemented
+    assert_eq!(val, LoxValue::Number(123.));
 }

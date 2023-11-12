@@ -31,6 +31,7 @@ impl ScopeDepth {
     }
 }
 
+#[derive(Debug)]
 pub struct AccessTable {
     access_table: HashMap<IdentifierId, ScopeDepth>,
 }
