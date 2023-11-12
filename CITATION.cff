@@ -1,0 +1,19 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Lox language interpreter written in Rust
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Łukasz
+    family-names: Niedzielski
+    email: lniedzielski42@gmail.com
+identifiers:
+  - type: url
+    value: 'https://github.com/kukininj'
+repository-code: 'https://github.com/kukininj/rlox'
+license: MIT
+commit: 32812957588955102462ba7bfa0218fe775d20a6

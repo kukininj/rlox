@@ -19,8 +19,8 @@ pub struct Environment {
 
 #[derive(Debug)]
 pub struct Frame {
-    pub values: HashMap<String, Variable>,
-    pub parent: Option<u32>,
+    values: HashMap<String, Variable>,
+    parent: Option<u32>,
 }
 
 impl Environment {
@@ -44,11 +44,11 @@ impl Environment {
             .expect("tried to get parent of global scope");
     }
 
-    pub fn head(&mut self) -> &mut Frame {
+    fn head(&mut self) -> &mut Frame {
         self.stack.get_mut(&self.head).unwrap()
     }
 
-    pub fn global(&mut self) -> &mut Frame {
+    fn global(&mut self) -> &mut Frame {
         self.stack.get_mut(&0).unwrap()
     }
 
