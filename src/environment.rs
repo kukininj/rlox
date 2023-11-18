@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use crate::error::Error;
-use crate::expression::{DebugInfo, Identifier};
+use crate::expression::{DebugInfo, Identifier, IdentifierId};
 use crate::lox_value::LoxValue;
-use crate::resolver::ScopeDepth;
+use crate::resolver::{AccessTable, ScopeDepth};
 
 #[derive(Debug)]
 pub struct Variable {
@@ -14,6 +14,7 @@ pub struct Variable {
 #[derive(Debug)]
 pub struct Environment {
     stack: HashMap<u32, Frame>,
+    pub access_table: AccessTable,
     head: u32,
 }
 
@@ -28,7 +29,13 @@ impl Environment {
         Environment {
             stack: HashMap::from([(0, Frame::new())]),
             head: 0,
+            access_table: AccessTable::empty(),
         }
+    }
+
+    pub fn extend_access_table(&mut self, access_table: AccessTable) -> Result<(), ()> {
+        self.access_table.add_all(access_table)?;
+        Ok(())
     }
 
     pub fn push(&mut self) {
@@ -98,27 +105,29 @@ impl Environment {
         }
     }
 
-    pub fn get(&mut self, identifier: &String, depth: Option<ScopeDepth>) -> Option<LoxValue> {
-        if let Some(depth) = depth {
+    pub fn get(&mut self, name: &String, id: &IdentifierId) -> Option<LoxValue> {
+        if let Some(depth) = self.access_table.get(id) {
             self.get_nth_scope(depth.get())
                 .values
-                .get(identifier)
+                .get(name)
                 .map(|var| var.value.clone())
         } else {
-            self.global()
-                .values
-                .get(identifier)
-                .map(|var| var.value.clone())
+            self.global().values.get(name).map(|var| var.value.clone())
         }
+    }
+
+    #[allow(dead_code)]
+    pub fn get_global(&mut self, name: &String) -> Option<LoxValue> {
+        self.global().values.get(name).map(|var| var.value.clone())
     }
 
     pub fn assign(
         &mut self,
         target: &String,
-        depth: Option<ScopeDepth>,
+        id: &IdentifierId,
         value: LoxValue,
     ) -> Option<LoxValue> {
-        if let Some(depth) = depth {
+        if let Some(depth) = self.access_table.get(id) {
             self.get_nth_scope(depth.get())
                 .values
                 .get_mut(target)
@@ -201,7 +210,7 @@ fn test_function_call() {
     interp.execute(&tree, access_table).unwrap();
     let val = interp
         .environment
-        .get(&"a".to_string(), None)
+        .get_global(&"a".to_string())
         .expect("Expected variable `a` to be defined.");
 
     assert_eq!(val, LoxValue::String("(123)".to_owned()));
@@ -237,7 +246,7 @@ fn test_closure_capturing() {
 
     let val = interp
         .environment
-        .get(&"a".to_string(), None)
+        .get_global(&"a".to_string())
         .expect("Expected variable `a` to be defined.");
 
     // TODO: fix when return statements implemented

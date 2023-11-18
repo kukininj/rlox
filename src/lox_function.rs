@@ -71,7 +71,7 @@ fn test_fun_stmt() {
     interp.execute(&tree, access_table).unwrap();
     let val = interp
         .environment
-        .get(&"a".to_string(), None)
+        .get_global(&"a".to_string())
         .expect("Expected variable `a` to be defined.");
 
     // TODO: fix when return statements implemented

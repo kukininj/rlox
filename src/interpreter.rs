@@ -22,7 +22,6 @@ pub struct Interpreter {
     pub line: usize,
     pub position: usize,
     pub environment: Environment,
-    pub access_table: AccessTable,
 }
 
 #[derive(Debug)]
@@ -37,7 +36,6 @@ impl Interpreter {
             line: 0,
             position: 0,
             environment: Environment::new(),
-            access_table: AccessTable::empty(),
         }
     }
 
@@ -51,9 +49,10 @@ impl Interpreter {
         statements: &Vec<Statement>,
         access_table: AccessTable,
     ) -> Result<LoxResult, Error> {
-        self.access_table
-            .add_all(access_table)
+        self.environment
+            .extend_access_table(access_table)
             .map_err(|_| self.error("Error while updating access_table"))?;
+
         self.run(statements)
     }
 
@@ -278,10 +277,8 @@ impl Interpreter {
             debug_info: DebugInfo { line, position, .. },
             id,
         } = identifier;
-        let depth = self.access_table.get(id);
-
         self.environment
-            .get(name, depth)
+            .get(name, id)
             .ok_or_else(|| Error::RuntimeError {
                 line: *line,
                 position: *position,
@@ -302,10 +299,8 @@ impl Interpreter {
             id,
         } = target;
 
-        let depth = self.access_table.get(id);
-
         self.environment
-            .assign(&name, depth, value)
+            .assign(&name, id, value)
             .ok_or_else(|| Error::RuntimeError {
                 line: *line,
                 position: *position,
@@ -448,7 +443,7 @@ fn variables() {
     interp.execute(&tree, access_table).unwrap();
     let val = interp
         .environment
-        .get(&"a".to_string(), None)
+        .get_global(&"a".to_string())
         .expect("Expected variable `a` to be defined.");
 
     assert_eq!(val, LoxValue::Number(3.));
@@ -473,7 +468,7 @@ fn loops() {
     interp.execute(&program, access_table).unwrap();
     let val = interp
         .environment
-        .get(&"a".to_string(), None)
+        .get_global(&"a".to_string())
         .expect("Expected variable `a` to be defined.");
 
     assert_eq!(val, LoxValue::Number(21.));
