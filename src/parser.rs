@@ -70,11 +70,7 @@ impl Parser {
 
     fn advance(&mut self) -> Result<(), Error> {
         if self.check(&TokenType::Eof) {
-            return Err(Error::ParsingError {
-                line: self.line,
-                position: self.position,
-                message: String::from("Tried to advance after Eof"),
-            });
+            return Err(self.error("Tried to advance after Eof"));
         }
         self.current_index += 1;
         let current = self.current_token().unwrap();
@@ -105,11 +101,11 @@ impl Parser {
             self.advance()?;
             Ok(())
         } else {
-            Err(Error::ParsingError {
-                line: self.line,
-                position: self.position,
-                message: format!("Expected {:?}, found: {:?}", t, self.current_token()),
-            })
+            Err(self.error(format!(
+                "Expected {:?}, found: {:?}",
+                t,
+                self.current_token()
+            )))
         }
     }
 
@@ -130,37 +126,29 @@ impl Parser {
     fn function_declaration(&mut self) -> Result<Statement, Error> {
         self.consume(TokenType::Fun)?;
 
-        let name = self.identifier().ok_or_else(|| Error::SyntaxError {
-            line: self.line,
-            position: self.position,
-            message: "Expected function identifier.".to_owned(),
-        })?;
-
-        self.advance()?;
+        let name = self
+            .identifier()
+            .ok_or_else(|| self.error("Expected function identifier."))?;
 
         self.consume(TokenType::LeftParen)?;
 
         let mut args = Vec::new();
 
         if !self.check(&TokenType::RightParen) {
-            args.push(self.identifier().ok_or_else(|| Error::ParsingError {
-                line: self.line,
-                position: self.position,
-                message: "Expected first argument Identifier".to_owned(),
-            })?);
+            let identifier = self
+                .identifier()
+                .ok_or_else(|| self.error("Expected argument Identifier"))?;
 
-            self.advance()?;
+            args.push(identifier);
 
             while self.check(&TokenType::Comma) {
                 self.consume(TokenType::Comma)?;
 
-                args.push(self.identifier().ok_or_else(|| Error::ParsingError {
-                    line: self.line,
-                    position: self.position,
-                    message: "Expected argument Identifier".to_owned(),
-                })?);
+                let identifier = self
+                    .identifier()
+                    .ok_or_else(|| self.error("Expected argument Identifier"))?;
 
-                self.advance()?;
+                args.push(identifier);
             }
         }
 
@@ -176,11 +164,9 @@ impl Parser {
     fn variable_declaration(&mut self) -> Result<Statement, Error> {
         self.consume(TokenType::Var)?;
 
-        let identifier = self.identifier().ok_or_else(|| Error::ParsingError {
-            line: self.line,
-            position: self.position,
-            message: "Expected varaible Identifier".to_owned(),
-        })?;
+        let identifier = self
+            .identifier()
+            .ok_or_else(|| self.error("Expected varaible Identifier"))?;
 
         self.advance()?;
 
@@ -230,11 +216,7 @@ impl Parser {
         self.consume(TokenType::If)?;
         let condition = self.expression()?;
         if !self.check(&TokenType::LeftBrace) {
-            return Err(Error::ParsingError {
-                line: self.line,
-                position: self.position,
-                message: "Expected the beginning of a block after an if ().".to_owned(),
-            });
+            return Err(self.error("Expected the beginning of a block after an if ()."));
         }
 
         let then_branch = self.block_statement()?;
@@ -257,11 +239,7 @@ impl Parser {
         self.consume(TokenType::While)?;
         let condition = self.expression()?;
         if !self.check(&TokenType::LeftBrace) {
-            return Err(Error::ParsingError {
-                line: self.line,
-                position: self.position,
-                message: "Expected the beginning of a block after an while ().".to_owned(),
-            });
+            return Err(self.error("Expected the beginning of a block after an while ()."));
         }
 
         let body = self.block_statement()?;
@@ -311,11 +289,7 @@ impl Parser {
         self.consume(TokenType::RightParen)?;
 
         if !self.check(&TokenType::LeftBrace) {
-            return Err(Error::ParsingError {
-                line: self.line,
-                position: self.position,
-                message: "Expected the beginning of a block after an for (;;).".to_owned(),
-            });
+            return Err(self.error("Expected the beginning of a block after an for (;;)."));
         }
 
         let mut body = self.block_statement()?;
@@ -328,13 +302,8 @@ impl Parser {
 
     fn expression_statement(&mut self) -> Result<Statement, Error> {
         let expr = self.expression()?;
-        self.consume(TokenType::Semicolon).or_else(|_| {
-            Err(Error::ParsingError {
-                line: self.line,
-                position: self.position,
-                message: "Expected ';' after expression".to_string(),
-            })
-        })?;
+        self.consume(TokenType::Semicolon)
+            .or_else(|_| Err(self.error("Expected ';' after expression")))?;
         Ok(Statement::Expression(expr))
     }
 
@@ -347,13 +316,8 @@ impl Parser {
             None
         };
 
-        self.consume(TokenType::Semicolon).or_else(|_| {
-            Err(Error::ParsingError {
-                line: self.line,
-                position: self.position,
-                message: "Expected ';' at the end of return statement".to_string(),
-            })
-        })?;
+        self.consume(TokenType::Semicolon)
+            .or_else(|_| Err(self.error("Expected ';' at the end of return statement")))?;
 
         Ok(Statement::Return { value: expr })
     }
@@ -591,18 +555,10 @@ impl Parser {
                     self.consume(TokenType::RightParen)?;
                     Ok(Expression::from(Grouping { expression: e }))
                 }
-                _ => Err(Error::ParsingError {
-                    line: self.line,
-                    position: self.position,
-                    message: String::from("Expected Literal, Identifier or start of expression at"),
-                }),
+                _ => Err(self.error("Expected Literal, Identifier or start of expression at")),
             };
         } else {
-            Err(Error::ParsingError {
-                line: self.line,
-                position: self.position,
-                message: String::from("Expected Token at"),
-            })
+            Err(self.error("Expected Token at"))
         }
     }
 
@@ -643,15 +599,26 @@ impl Parser {
                 lexeme,
                 line,
                 position,
-            }) => Some(self.create_identifier(
-                name.clone(),
-                DebugInfo {
-                    line: *line,
-                    position: *position,
-                    lexeme: lexeme.clone(),
-                },
-            )),
+            }) => {
+                let identifier = self.create_identifier(
+                    name.clone(),
+                    DebugInfo {
+                        line: *line,
+                        position: *position,
+                        lexeme: lexeme.clone(),
+                    },
+                );
+                self.advance().unwrap();
+                Some(identifier)
+            }
             _ => None,
+        }
+    }
+    fn error<S: Into<String>>(&self, message: S) -> Error {
+        Error::ResolverError {
+            line: self.line,
+            position: self.position,
+            message: message.into(),
         }
     }
 }
