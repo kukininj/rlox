@@ -220,6 +220,7 @@ impl Resolver {
             Expression::Assignment(assignment) => {
                 self.visit_expression(&assignment.value)?;
                 let target = &assignment.target;
+                self.set_location(&target.debug_info);
                 self.resolve_local_identifier(target.id, target.name.clone())?;
                 Ok(())
             }
@@ -247,11 +248,11 @@ impl Resolver {
             .and_then(|scope| scope.get(&identifier.name))
             .is_some_and(|defined| *defined == false)
         {
-            Err(self.error("Can't read local variable in its initializer."))
-        } else {
-            self.resolve_local_identifier(identifier.id, identifier.name.clone())?;
-            Ok(())
+            return Err(self.error("Can't read local variable in its initializer."));
         }
+
+        self.resolve_local_identifier(identifier.id, identifier.name.clone())?;
+        Ok(())
     }
 
     fn error<S: Into<String>>(&self, message: S) -> Error {
