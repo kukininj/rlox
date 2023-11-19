@@ -1,7 +1,12 @@
 use core::fmt;
 
 use crate::{
-    expression::Identifier, interpreter::Interpreter, lox_value::LoxValue, statement::Block, Error,
+    environment::FrameId,
+    expression::{Identifier, IdentifierId},
+    interpreter::Interpreter,
+    lox_value::LoxValue,
+    statement::Block,
+    Error,
 };
 
 #[derive(PartialEq, Clone, Debug)]
@@ -38,6 +43,7 @@ pub struct LoxFun {
     pub name: Identifier,
     pub args: Box<[Identifier]>,
     pub body: Block,
+    pub captured_scope: FrameId,
 }
 
 impl fmt::Display for LoxFun {
@@ -53,8 +59,18 @@ impl LoxFun {
 }
 
 impl LoxFun {
-    pub(crate) fn new(name: Identifier, args: Box<[Identifier]>, body: Block) -> Self {
-        LoxFun { name, args, body }
+    pub(crate) fn new(
+        name: Identifier,
+        frame: FrameId,
+        args: Box<[Identifier]>,
+        body: Block,
+    ) -> Self {
+        LoxFun {
+            name,
+            args,
+            body,
+            captured_scope: frame,
+        }
     }
 }
 

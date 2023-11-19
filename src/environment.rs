@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::error::Error;
 use crate::expression::{DebugInfo, Identifier, IdentifierId};
 use crate::lox_value::LoxValue;
-use crate::resolver::{AccessTable, ScopeDepth};
+use crate::resolver::AccessTable;
 
 #[derive(Debug)]
 pub struct Variable {
@@ -11,26 +11,33 @@ pub struct Variable {
     defined_at: DebugInfo,
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
+pub struct FrameId(u32);
+
 #[derive(Debug)]
 pub struct Environment {
-    stack: HashMap<u32, Frame>,
+    stack: HashMap<FrameId, Frame>,
     pub access_table: AccessTable,
-    head: u32,
+    head: FrameId,
 }
 
 #[derive(Debug)]
 pub struct Frame {
     values: HashMap<String, Variable>,
-    parent: Option<u32>,
+    parent: Option<FrameId>,
 }
 
 impl Environment {
     pub fn new() -> Self {
         Environment {
-            stack: HashMap::from([(0, Frame::new())]),
-            head: 0,
+            stack: HashMap::from([(FrameId(0), Frame::new())]),
+            head: FrameId(0),
             access_table: AccessTable::empty(),
         }
+    }
+
+    pub fn get_current_frame_id(&self) -> FrameId {
+        self.head
     }
 
     pub fn extend_access_table(&mut self, access_table: AccessTable) -> Result<(), ()> {
@@ -40,8 +47,16 @@ impl Environment {
 
     pub fn push(&mut self) {
         let parent = self.head;
-        self.head = self.stack.len() as u32;
+        self.head = FrameId(self.stack.len() as u32);
         self.stack.insert(self.head, Frame::with_parent(parent));
+    }
+
+    pub fn push_closure(&mut self, frame_id: FrameId) -> FrameId {
+        let parent = self.head;
+        self.head = FrameId(self.stack.len() as u32);
+        self.stack.insert(self.head, Frame::with_parent(frame_id));
+
+        parent
     }
 
     pub fn pop(&mut self) {
@@ -51,12 +66,16 @@ impl Environment {
             .expect("tried to get parent of global scope");
     }
 
+    pub fn pop_closure(&mut self, parent: FrameId) {
+        self.head = parent;
+    }
+
     fn head(&mut self) -> &mut Frame {
         self.stack.get_mut(&self.head).unwrap()
     }
 
     fn global(&mut self) -> &mut Frame {
-        self.stack.get_mut(&0).unwrap()
+        self.stack.get_mut(&FrameId(0)).unwrap()
     }
 
     fn get_nth_scope(&mut self, n: usize) -> &mut Frame {
@@ -152,7 +171,7 @@ impl Frame {
         }
     }
 
-    pub fn with_parent(parent: u32) -> Frame {
+    pub fn with_parent(parent: FrameId) -> Frame {
         Frame {
             values: HashMap::new(),
             parent: Some(parent),
@@ -226,13 +245,12 @@ fn test_closure_capturing() {
     let source = vec![
         "fun funkcja() {",
         "    var a = 123;",
-        "    print a;",
         "    fun local_fun() {",
-        "        print a;",
+        "        return a;",
         "    }",
         "    return local_fun;",
         "}",
-        "var a = (funkcja())();",
+        "var ret_val = (funkcja())();",
     ]
     .join("\n");
 
@@ -246,8 +264,8 @@ fn test_closure_capturing() {
 
     let val = interp
         .environment
-        .get_global(&"a".to_string())
-        .expect("Expected variable `a` to be defined.");
+        .get_global(&"ret_val".to_string())
+        .expect("Expected variable `ret_val` to be defined.");
 
     // TODO: fix when return statements implemented
     assert_eq!(val, LoxValue::Number(123.));

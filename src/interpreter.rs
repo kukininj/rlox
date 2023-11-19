@@ -128,7 +128,13 @@ impl Interpreter {
         args: &Vec<Identifier>,
         body: &Block,
     ) -> Result<(), Error> {
-        let lox_function = LoxFun::new(name.clone(), args.clone().into_boxed_slice(), body.clone());
+        let frame_id = self.environment.get_current_frame_id();
+        let lox_function = LoxFun::new(
+            name.clone(),
+            frame_id,
+            args.clone().into_boxed_slice(),
+            body.clone(),
+        );
         self.environment
             .define(name, LoxValue::LoxFun(lox_function.into()))?;
         Ok(())
@@ -342,30 +348,30 @@ impl Interpreter {
                 }
 
                 if fun.arity() != args.len() {
-                    Err(self.error(format!(
+                    return Err(self.error(format!(
                         "Expected {} arguments, got {}.",
                         fun.arity(),
                         args.len()
-                    )))
-                } else {
-                    self.environment.push();
-                    for (identifier, value) in
-                        std::iter::zip(fun.args.into_iter(), arg_values.into_iter())
-                    {
-                        self.environment.define(identifier, value.clone())?;
-                    }
-                    let ret_value = match self.run(&fun.body.statements) {
-                        // napotkano Statement::Return podczas wykonywania funkcji
-                        Ok(LoxResult::Return(value)) => Ok(value),
-                        // ciało funkcji nie zawierało wyrażenia return, być może inne przypadki
-                        Ok(LoxResult::None) => Ok(LoxValue::Nil),
-                        // RuntimeError
-                        Err(e) => Err(e),
-                    };
-                    self.environment.pop();
-
-                    ret_value
+                    )));
                 }
+
+                let parent = self.environment.push_closure(fun.captured_scope);
+                for (identifier, value) in
+                    std::iter::zip(fun.args.into_iter(), arg_values.into_iter())
+                {
+                    self.environment.define(identifier, value.clone())?;
+                }
+                let ret_value = match self.run(&fun.body.statements) {
+                    // napotkano Statement::Return podczas wykonywania funkcji
+                    Ok(LoxResult::Return(value)) => Ok(value),
+                    // ciało funkcji nie zawierało wyrażenia return, być może inne przypadki
+                    Ok(LoxResult::None) => Ok(LoxValue::Nil),
+                    // RuntimeError
+                    Err(e) => Err(e),
+                };
+                self.environment.pop_closure(parent);
+
+                ret_value
             }
             LoxValue::ForeinFun(fun) => {
                 let mut arg_values: Vec<LoxValue> = Vec::new();
