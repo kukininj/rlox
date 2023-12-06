@@ -1,10 +1,25 @@
+use std::fmt::Formatter;
+
 use crate::*;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Clone, Default)]
 pub struct DebugInfo {
     pub line: usize,
     pub position: usize,
     pub lexeme: String,
+}
+
+impl std::fmt::Debug for DebugInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let DebugInfo {
+            line,
+            position,
+            lexeme,
+        } = self;
+        f.write_fmt(format_args!(
+            "DebugInfo {{ {line}:{position} \"{lexeme}\" }}"
+        ))
+    }
 }
 
 impl From<Token> for DebugInfo {

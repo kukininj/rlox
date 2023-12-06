@@ -168,13 +168,14 @@ impl Parser {
             .identifier()
             .ok_or_else(|| self.error("Expected varaible Identifier"))?;
 
-        self.advance()?;
+        // self.advance()?;
 
         let mut initializer = None;
         if self.check(&TokenType::Equal) {
             self.advance()?;
             initializer = Some(self.expression()?);
         }
+        // dbg!(self.current_token());
         self.consume(TokenType::Semicolon)?;
 
         Ok(Statement::Variable {
@@ -615,7 +616,7 @@ impl Parser {
         }
     }
     fn error<S: Into<String>>(&self, message: S) -> Error {
-        Error::ResolverError {
+        Error::ParsingError {
             line: self.line,
             position: self.position,
             message: message.into(),
