@@ -49,6 +49,10 @@ impl core::fmt::Display for LoxValue {
 }
 
 impl LoxValue {
+    pub fn print(value: &LoxValue) {
+        println!("{}", LoxValue::to_string(&value));
+    }
+
     pub fn add(left: LoxValue, right: LoxValue) -> Result<LoxValue, Error> {
         match (left, right) {
             (LoxValue::Number(l), LoxValue::Number(r)) => Ok(LoxValue::Number(l + r)),

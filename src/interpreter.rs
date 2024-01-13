@@ -58,60 +58,76 @@ impl Interpreter {
 
     fn run(self: &mut Self, statements: &Vec<Statement>) -> Result<LoxResult, Error> {
         for stmt in statements {
-            match stmt {
-                Statement::Nop => {}
-                Statement::Expression(expr) => {
-                    self.evaluate(expr)?;
-                }
-                Statement::Print(expr) => {
-                    let value = self.evaluate(expr)?;
-                    println!("{}", LoxValue::to_string(&value));
-                }
-                Statement::Variable {
-                    name,
-                    initializer: Some(initializer),
-                } => {
-                    let value = self.evaluate(initializer)?;
-                    self.environment.define(name, value.clone())?;
-                }
-                Statement::Variable {
-                    name,
-                    initializer: None,
-                } => {
-                    self.environment.define(name, LoxValue::Nil)?;
-                }
-                Statement::Block(block) => {
-                    self.run_block(&block)?;
-                }
-                Statement::If {
-                    condition,
-                    then_branch,
-                    else_branch,
-                } => {
-                    if LoxValue::is_truthy(&self.evaluate(condition)?) {
-                        self.run_block(&then_branch)?;
-                    } else if let Some(else_branch) = else_branch {
-                        self.run_block(&else_branch)?;
-                    }
-                }
-                Statement::While { condition, body } => {
-                    while LoxValue::is_truthy(&self.evaluate(condition)?) {
-                        self.run_block(body)?;
-                    }
-                }
-                Statement::Function { name, args, body } => {
-                    self.define_function(name, args, body)?;
-                }
-                Statement::Return { value: Some(value) } => {
-                    let value = self.evaluate(value)?;
-
-                    return Ok(LoxResult::Return(value));
-                }
-                Statement::Return { value: None } => {
-                    return Ok(LoxResult::Return(LoxValue::Nil));
-                }
-            };
+            let result = self.visit_statement(stmt)?;
+            if let LoxResult::Return(_) = result {
+                return Ok(result);
+            }
         }
+        Ok(LoxResult::None)
+    }
+
+    fn visit_statement(&mut self, statement: &Statement) -> Result<LoxResult, Error> {
+        match statement {
+            Statement::Nop => {}
+            Statement::Expression(expr) => {
+                self.evaluate(expr)?;
+            }
+            Statement::Print(expr) => {
+                let value = self.evaluate(expr)?;
+                LoxValue::print(&value);
+            }
+            Statement::Variable {
+                name,
+                initializer: Some(initializer),
+            } => {
+                let value = self.evaluate(initializer)?;
+                self.environment.define(name, value.clone())?;
+            }
+            Statement::Variable {
+                name,
+                initializer: None,
+            } => {
+                self.environment.define(name, LoxValue::Nil)?;
+            }
+            Statement::Block(block) => {
+                self.run_block(&block)?;
+            }
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                let result = if LoxValue::is_truthy(&self.evaluate(condition)?) {
+                    self.run_block(&then_branch)?
+                } else {
+                    if let Some(else_branch) = else_branch {
+                        self.run_block(&else_branch)?
+                    } else {
+                        LoxResult::None
+                    }
+                };
+
+                if let LoxResult::Return(_) = result {
+                    return Ok(result);
+                }
+            }
+            Statement::While { condition, body } => {
+                while LoxValue::is_truthy(&self.evaluate(condition)?) {
+                    self.run_block(body)?;
+                }
+            }
+            Statement::Function { name, args, body } => {
+                self.define_function(name, args, body)?;
+            }
+            Statement::Return { value: Some(value) } => {
+                let value = self.evaluate(value)?;
+
+                return Ok(LoxResult::Return(value));
+            }
+            Statement::Return { value: None } => {
+                return Ok(LoxResult::Return(LoxValue::Nil));
+            }
+        };
         Ok(LoxResult::None)
     }
 
@@ -478,4 +494,22 @@ fn loops() {
         .expect("Expected variable `a` to be defined.");
 
     assert_eq!(val, LoxValue::Number(21.));
+}
+
+#[test]
+fn program_return() {
+    use crate::parser::Parser;
+    use crate::resolver;
+    use crate::scanner;
+    let source = concat!("var a = 1;", "return a + 2;").to_string();
+    let mut parser = Parser::new();
+    let tokens = scanner::scan_tokens(&source).unwrap();
+    let program = parser.parse(tokens).unwrap();
+    let access_table = resolver::resolve(&program).unwrap();
+    let mut interp = Interpreter::new();
+    let val = interp.execute(&program, access_table).unwrap();
+
+    let _v = LoxValue::Number(3.);
+
+    assert_eq!(matches!(val, LoxResult::Return(_v)), true);
 }
