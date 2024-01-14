@@ -11,6 +11,7 @@ pub fn from_slice<'a, 'b>(
 
     let source = &source[characters_skipped..];
 
+    // rozpoznanie lekseme
     let (token_type, token_len) = match source.as_bytes() {
         [b'(', ..] => (TokenType::LeftParen, 1),
         [b')', ..] => (TokenType::RightParen, 1),
