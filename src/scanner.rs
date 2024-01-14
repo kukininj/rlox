@@ -1,10 +1,10 @@
 use crate::{Error, Token, TokenType};
 
-pub fn from_slice(
-    source: &str,
-    line: &mut usize,
-    line_position: &mut usize,
-) -> Result<(Token, usize), Error> {
+pub fn from_slice<'a, 'b>(
+    source: &'a str,
+    line: &'b mut usize,
+    line_position: &'b mut usize,
+) -> Result<(Token, &'a str), Error> {
     let characters_skipped = skip_whitespace_characters(source, line, line_position);
     let line = *line;
     let position = *line_position;
@@ -90,7 +90,7 @@ pub fn from_slice(
             line,
             position,
         },
-        characters_skipped + token_len,
+        &source[token_len..],
     ));
 }
 
@@ -192,16 +192,13 @@ pub fn scan_tokens(source: &String) -> Result<Vec<Token>, Error> {
     let mut tokens = Vec::new();
 
     let mut slice_handle = source.as_str();
-    let mut current = 0usize;
     let mut line_number = 1usize;
     let mut line_position = 1usize;
 
     while slice_handle.len() > 0 {
-        let (token, characters_skipped) =
-            from_slice(slice_handle, &mut line_number, &mut line_position)?;
+        let token;
+        (token, slice_handle) = from_slice(slice_handle, &mut line_number, &mut line_position)?;
         tokens.push(token);
-        current += characters_skipped;
-        slice_handle = &source[current..];
     }
 
     tokens.push(Token {
