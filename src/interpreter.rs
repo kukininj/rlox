@@ -1,3 +1,5 @@
+use core::panic;
+
 use crate::environment::Environment;
 use crate::error::Error;
 use crate::expression::Binary;
@@ -90,7 +92,11 @@ impl Interpreter {
                 self.environment.define(name, LoxValue::Nil)?;
             }
             Statement::Block(block) => {
-                self.run_block(&block)?;
+                let result = self.run_block(block)?;
+
+                if let LoxResult::Return(_) = result {
+                    return Ok(result);
+                }
             }
             Statement::If {
                 condition,
@@ -509,7 +515,15 @@ fn program_return() {
 
     let _v = LoxValue::Number(3.);
 
-    assert_eq!(matches!(val, LoxResult::Return(_v)), true);
+    assert_eq!(
+        match val {
+            LoxResult::Return(LoxValue::Number(value)) => {
+                value == 3.
+            }
+            _ => false,
+        },
+        true
+    );
 }
 
 #[test]
@@ -520,7 +534,9 @@ fn func_loop_return() {
     let source = "fun test() {
             for (var a = 0; a < 10; a = a + 1) {
                 if (a == 5) {
-                    return a;
+                    { 
+                        return a;
+                    }
                 }
             }
         }
@@ -534,7 +550,13 @@ fn func_loop_return() {
     let mut interp = Interpreter::new();
     let val = interp.execute(&program, access_table).unwrap();
 
-    let _v = LoxValue::Number(5.);
-
-    assert_eq!(matches!(val, LoxResult::Return(_v)), true);
+    assert_eq!(
+        match val {
+            LoxResult::Return(LoxValue::Number(value)) => {
+                value == 5.
+            }
+            _ => false,
+        },
+        true
+    );
 }
