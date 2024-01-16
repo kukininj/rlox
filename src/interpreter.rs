@@ -113,7 +113,11 @@ impl Interpreter {
             }
             Statement::While { condition, body } => {
                 while LoxValue::is_truthy(&self.visit_expression(condition)?) {
-                    self.run_block(body)?;
+                    let result = self.run_block(body)?;
+
+                    if let LoxResult::Return(_) = result {
+                        return Ok(result);
+                    }
                 }
             }
             Statement::Function { name, args, body } => {
@@ -504,6 +508,33 @@ fn program_return() {
     let val = interp.execute(&program, access_table).unwrap();
 
     let _v = LoxValue::Number(3.);
+
+    assert_eq!(matches!(val, LoxResult::Return(_v)), true);
+}
+
+#[test]
+fn func_loop_return() {
+    use crate::parser::Parser;
+    use crate::resolver;
+    use crate::scanner;
+    let source = "fun test() {
+            for (var a = 0; a < 10; a = a + 1) {
+                if (a == 5) {
+                    return a;
+                }
+            }
+        }
+        return test();
+        "
+    .to_string();
+    let mut parser = Parser::new();
+    let tokens = scanner::scan_tokens(&source).unwrap();
+    let program = parser.parse(tokens).unwrap();
+    let access_table = resolver::resolve(&program).unwrap();
+    let mut interp = Interpreter::new();
+    let val = interp.execute(&program, access_table).unwrap();
+
+    let _v = LoxValue::Number(5.);
 
     assert_eq!(matches!(val, LoxResult::Return(_v)), true);
 }
