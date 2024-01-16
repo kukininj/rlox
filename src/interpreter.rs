@@ -355,14 +355,14 @@ impl Interpreter {
 
         let calle = self.visit_expression(calle)?;
 
+        let mut arg_values: Vec<LoxValue> = Vec::new();
+
+        for exp in args {
+            arg_values.push(self.visit_expression(exp)?);
+        }
+
         match calle {
             LoxValue::LoxFun(fun) => {
-                let mut arg_values: Vec<LoxValue> = Vec::new();
-
-                for exp in args {
-                    arg_values.push(self.visit_expression(exp)?);
-                }
-
                 if fun.arity() != args.len() {
                     return Err(self.error(format!(
                         "Expected {} arguments, got {}.",
@@ -390,12 +390,6 @@ impl Interpreter {
                 ret_value
             }
             LoxValue::ForeinFun(fun) => {
-                let mut arg_values: Vec<LoxValue> = Vec::new();
-
-                for exp in args {
-                    arg_values.push(self.visit_expression(exp)?);
-                }
-
                 if fun.arity() != args.len() {
                     Err(self.error(format!(
                         "Expected {} arguments, got {}.",
