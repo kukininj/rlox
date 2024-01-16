@@ -139,7 +139,14 @@ impl Resolver {
                 self.declare(&identifier.name)?;
                 self.define(&identifier.name)?;
 
-                self.resolve_function(args, body)?;
+                self.scopes.push(HashMap::new());
+                for arg in args {
+                    self.set_location(&arg.debug_info);
+                    self.declare(&arg.name)?;
+                    self.define(&arg.name)?;
+                }
+                self.resolve(&body.statements)?;
+                self.scopes.pop();
                 Ok(())
             }
         }
@@ -182,18 +189,6 @@ impl Resolver {
         self.resolve(&block.statements)?;
         self.scopes.pop();
 
-        Ok(())
-    }
-
-    fn resolve_function(&mut self, args: &[Identifier], body: &Block) -> Result<(), Error> {
-        self.scopes.push(HashMap::new());
-        for arg in args {
-            self.set_location(&arg.debug_info);
-            self.declare(&arg.name)?;
-            self.define(&arg.name)?;
-        }
-        self.resolve(&body.statements)?;
-        self.scopes.pop();
         Ok(())
     }
 

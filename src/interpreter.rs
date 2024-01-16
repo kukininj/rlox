@@ -371,7 +371,7 @@ impl Interpreter {
                     )));
                 }
 
-                let parent = self.environment.push_closure(fun.captured_scope);
+                self.environment.push_closure(fun.captured_scope);
                 for (identifier, value) in
                     std::iter::zip(fun.args.into_iter(), arg_values.into_iter())
                 {
@@ -385,7 +385,7 @@ impl Interpreter {
                     // RuntimeError
                     Err(e) => Err(e),
                 };
-                self.environment.pop_closure(parent);
+                self.environment.pop_closure();
 
                 ret_value
             }

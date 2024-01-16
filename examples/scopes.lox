@@ -1,0 +1,9 @@
+{ // początek zasięgu a
+    var zmienna = "scope a";
+    { // początek zasięgu b
+        print zmienna;
+        var zmienna = "scope b";
+        print zmienna;
+    }
+    print zmienna;
+}

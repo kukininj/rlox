@@ -17,6 +17,7 @@ pub struct FrameId(u32);
 #[derive(Debug)]
 pub struct Environment {
     stack: HashMap<FrameId, Frame>,
+    closure_stack: Vec<FrameId>,
     pub access_table: AccessTable,
     head: FrameId,
 }
@@ -31,6 +32,7 @@ impl Environment {
     pub fn new() -> Self {
         Environment {
             stack: HashMap::from([(FrameId(0), Frame::new())]),
+            closure_stack: Vec::new(),
             head: FrameId(0),
             access_table: AccessTable::empty(),
         }
@@ -55,6 +57,7 @@ impl Environment {
         let parent = self.head;
         self.head = FrameId(self.stack.len() as u32);
         self.stack.insert(self.head, Frame::with_parent(frame_id));
+        self.closure_stack.push(parent);
 
         parent
     }
@@ -66,8 +69,11 @@ impl Environment {
             .expect("tried to get parent of global scope");
     }
 
-    pub fn pop_closure(&mut self, parent: FrameId) {
-        self.head = parent;
+    pub fn pop_closure(&mut self) {
+        self.head = self
+            .closure_stack
+            .pop()
+            .expect("tried to pop closure scope, when no closure scope was pushed before");
     }
 
     fn head(&mut self) -> &mut Frame {

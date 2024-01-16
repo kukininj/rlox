@@ -6,6 +6,6 @@ var a = "global";
         print a;
     }
     local_fun();
-    var a = "global";
+    var a = "local";
     local_fun();
 }
