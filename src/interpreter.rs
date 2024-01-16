@@ -70,17 +70,17 @@ impl Interpreter {
         match statement {
             Statement::Nop => {}
             Statement::Expression(expr) => {
-                self.evaluate(expr)?;
+                self.visit_expression(expr)?;
             }
             Statement::Print(expr) => {
-                let value = self.evaluate(expr)?;
+                let value = self.visit_expression(expr)?;
                 LoxValue::print(&value);
             }
             Statement::Variable {
                 name,
                 initializer: Some(initializer),
             } => {
-                let value = self.evaluate(initializer)?;
+                let value = self.visit_expression(initializer)?;
                 self.environment.define(name, value.clone())?;
             }
             Statement::Variable {
@@ -97,7 +97,7 @@ impl Interpreter {
                 then_branch,
                 else_branch,
             } => {
-                let result = if LoxValue::is_truthy(&self.evaluate(condition)?) {
+                let result = if LoxValue::is_truthy(&self.visit_expression(condition)?) {
                     self.run_block(&then_branch)?
                 } else {
                     if let Some(else_branch) = else_branch {
@@ -112,7 +112,7 @@ impl Interpreter {
                 }
             }
             Statement::While { condition, body } => {
-                while LoxValue::is_truthy(&self.evaluate(condition)?) {
+                while LoxValue::is_truthy(&self.visit_expression(condition)?) {
                     self.run_block(body)?;
                 }
             }
@@ -120,7 +120,7 @@ impl Interpreter {
                 self.define_function(name, args, body)?;
             }
             Statement::Return { value: Some(value) } => {
-                let value = self.evaluate(value)?;
+                let value = self.visit_expression(value)?;
 
                 return Ok(LoxResult::Return(value));
             }
@@ -156,7 +156,7 @@ impl Interpreter {
         Ok(())
     }
 
-    pub fn evaluate(self: &mut Self, expr: &Expression) -> Result<LoxValue, Error> {
+    pub fn visit_expression(self: &mut Self, expr: &Expression) -> Result<LoxValue, Error> {
         let result = match expr {
             Expression::Binary(binary) => self.visit_binary(binary),
             Expression::Grouping(grouping) => self.visit_grouping(grouping),
@@ -181,8 +181,8 @@ impl Interpreter {
     }
 
     fn visit_binary(self: &mut Self, binary: &Binary) -> Result<LoxValue, Error> {
-        let left = self.evaluate(&binary.left)?;
-        let right = self.evaluate(&binary.right)?;
+        let left = self.visit_expression(&binary.left)?;
+        let right = self.visit_expression(&binary.right)?;
 
         match binary {
             Binary {
@@ -259,7 +259,7 @@ impl Interpreter {
     }
 
     fn visit_grouping(self: &mut Self, grouping: &Grouping) -> Result<LoxValue, Error> {
-        self.evaluate(&grouping.expression)
+        self.visit_expression(&grouping.expression)
     }
 
     fn visit_literal(self: &mut Self, literal: &LiteralValue) -> LoxValue {
@@ -273,7 +273,7 @@ impl Interpreter {
     }
 
     fn visit_unary(self: &mut Self, unary: &Unary) -> Result<LoxValue, Error> {
-        let right = self.evaluate(&unary.right)?;
+        let right = self.visit_expression(&unary.right)?;
         match unary {
             Unary {
                 operator: UnaryOperator::Negative(debug),
@@ -313,7 +313,7 @@ impl Interpreter {
         target: &Identifier,
         value: &Expression,
     ) -> Result<LoxValue, Error> {
-        let value = self.evaluate(&value)?;
+        let value = self.visit_expression(&value)?;
 
         let Identifier {
             name,
@@ -331,7 +331,7 @@ impl Interpreter {
     }
 
     fn visit_logical(self: &mut Self, logical: &Logical) -> Result<LoxValue, Error> {
-        let left = self.evaluate(&logical.left)?;
+        let left = self.visit_expression(&logical.left)?;
         match &logical.operator {
             LogicalOperator::Or(debug) => {
                 self.set_debug(&debug);
@@ -346,21 +346,21 @@ impl Interpreter {
                 }
             }
         }
-        let right = self.evaluate(&logical.right)?;
+        let right = self.visit_expression(&logical.right)?;
         Ok(right)
     }
 
     fn visit_call(self: &mut Self, call: &Call) -> Result<LoxValue, Error> {
         let Call { calle, args, .. } = call;
 
-        let calle = self.evaluate(calle)?;
+        let calle = self.visit_expression(calle)?;
 
         match calle {
             LoxValue::LoxFun(fun) => {
                 let mut arg_values: Vec<LoxValue> = Vec::new();
 
                 for exp in args {
-                    arg_values.push(self.evaluate(exp)?);
+                    arg_values.push(self.visit_expression(exp)?);
                 }
 
                 if fun.arity() != args.len() {
@@ -393,7 +393,7 @@ impl Interpreter {
                 let mut arg_values: Vec<LoxValue> = Vec::new();
 
                 for exp in args {
-                    arg_values.push(self.evaluate(exp)?);
+                    arg_values.push(self.visit_expression(exp)?);
                 }
 
                 if fun.arity() != args.len() {
