@@ -14,6 +14,7 @@ use crate::expression::Logical;
 use crate::expression::LogicalOperator;
 use crate::expression::Unary;
 use crate::expression::UnaryOperator;
+use crate::lox_function::ForeinFun;
 use crate::lox_function::LoxFun;
 use crate::lox_value::LoxValue;
 use crate::resolver::AccessTable;
@@ -34,11 +35,40 @@ pub enum LoxResult {
 
 impl Interpreter {
     pub fn new() -> Self {
-        Interpreter {
+        let mut interpreter = Interpreter {
             line: 0,
             position: 0,
             environment: Environment::new(),
+        };
+
+        interpreter.init();
+
+        return interpreter;
+    }
+
+    fn init(&mut self) {
+        let native_identifier = Identifier {
+            name: "toString".to_owned(),
+            id: 0,
+            debug_info: DebugInfo {
+                line: 0,
+                position: 0,
+                lexeme: "<native test>".to_owned(),
+            },
+        };
+
+        fn to_string(_env: &mut Interpreter, args: Box<[LoxValue]>) -> Result<LoxValue, Error> {
+            let value = args.get(0).unwrap();
+
+            let str = LoxValue::to_string(value);
+
+            Ok(LoxValue::String(str))
         }
+
+        let fun = ForeinFun::new("toString".to_owned(), 1, to_string);
+        self.environment
+            .define(&native_identifier, LoxValue::ForeinFun(fun.into()))
+            .expect("Failed to initialize function toString");
     }
 
     fn set_debug(self: &mut Self, debug: &DebugInfo) {
