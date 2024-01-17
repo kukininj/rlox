@@ -1,0 +1,9 @@
+var err = 1 + false;
+print nie_zdefiniowane;
+print -"znaki";
+print -true;
+
+// bledy skladni
+
+fun (a) {print a;}
+var a = {return 123;}

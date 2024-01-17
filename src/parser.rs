@@ -48,7 +48,7 @@ impl Parser {
                     program.push(statement);
                 }
                 Err(error) => {
-                    println!("Encountered Error while parsing: {:?}", error);
+                    println!("{:#?}", error);
                     if failed.is_none() {
                         failed = Some(error);
                     }
@@ -556,10 +556,16 @@ impl Parser {
                     self.consume(TokenType::RightParen)?;
                     Ok(Expression::from(Grouping { expression: e }))
                 }
-                _ => Err(self.error("Expected Literal, Identifier or start of expression at")),
+                token => {
+                    let message = format!(
+                        "Expected Literal, Identifier or start of expression, found: {:?}",
+                        token
+                    );
+                    Err(self.error(message))
+                }
             };
         } else {
-            Err(self.error("Expected Token at"))
+            Err(self.error("Expected Token"))
         }
     }
 

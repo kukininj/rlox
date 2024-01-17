@@ -71,8 +71,19 @@ fn main() {
                     Ok(_result) => {
                         // println!("{:?}", result);
                     }
+                    Err(Error::ParsingError {
+                        line,
+                        position,
+                        message: _,
+                    }) => {
+                        println!(
+                            "Encountered error while parsing program, at line {} position {}",
+                            line, position
+                        );
+                    }
                     Err(error) => {
-                        println!("{:?}", error);
+                        println!("Encountered Error:");
+                        println!("{:#?}", error);
                     }
                 };
 
@@ -87,7 +98,7 @@ fn main() {
             match run(code.clone()) {
                 Ok(_) => {}
                 Err(e) => {
-                    println!("Error: {:?}", e);
+                    println!("Error: {:#?}", e);
                 }
             }
         }
@@ -97,7 +108,7 @@ fn main() {
             match print_ast(&code) {
                 Ok(_) => {}
                 Err(e) => {
-                    println!("Error: {:?}", e);
+                    println!("Error: {:#?}", e);
                 }
             }
         }
