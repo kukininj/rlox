@@ -13,10 +13,12 @@ mod tokens;
 use error::*;
 use tokens::*;
 
+use std::borrow::Borrow;
 use std::env;
 use std::fs;
 use std::io;
 use std::io::Write;
+use std::mem;
 
 use crate::interpreter::Interpreter;
 use crate::parser::Parser;
@@ -50,10 +52,10 @@ fn print_ast(source: &String) -> Result<(), Error> {
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let args: Vec<&'static mut str> = env::args().map(|arg| arg.leak()).collect();
 
-    match args.len() {
-        1 => {
+    match args.as_slice() {
+        [_] => {
             let mut line = String::new();
             print!(" >> ");
             io::stdout().flush().unwrap();
@@ -79,8 +81,8 @@ fn main() {
                 io::stdout().flush().unwrap();
             }
         }
-        2 => {
-            let code = fs::read_to_string(args.get(1).unwrap()).unwrap();
+        [_, path] if *path != "--help" => {
+            let code = fs::read_to_string(path).unwrap();
 
             match run(code.clone()) {
                 Ok(_) => {}
@@ -89,8 +91,8 @@ fn main() {
                 }
             }
         }
-        3 => {
-            let code = fs::read_to_string(args.get(2).unwrap()).unwrap();
+        [_, flag, path] if *flag == "--print-args" => {
+            let code = fs::read_to_string(path).unwrap();
 
             match print_ast(&code) {
                 Ok(_) => {}

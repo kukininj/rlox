@@ -498,9 +498,9 @@ impl Parser {
     }
 
     fn call(&mut self) -> Result<Expression, Error> {
-        let calle = self.primary()?;
+        let mut calle = self.primary()?;
 
-        if self.check(&TokenType::LeftParen) {
+        while self.check(&TokenType::LeftParen) {
             let debug_info = DebugInfo {
                 line: self.line,
                 position: self.position,
@@ -521,14 +521,14 @@ impl Parser {
 
             self.consume(TokenType::RightParen)?;
 
-            Ok(Expression::from(Call {
+            calle = Expression::from(Call {
                 calle,
                 debug_info,
                 args,
-            }))
-        } else {
-            Ok(calle)
+            });
         }
+
+        Ok(calle)
     }
 
     fn primary(&mut self) -> Result<Expression, Error> {

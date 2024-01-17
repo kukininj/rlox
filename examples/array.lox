@@ -1,0 +1,26 @@
+var map = nil;
+fun add(key, value) {
+  var parent = map;
+  fun entry(k) {
+    if (k == key) {
+      return value;
+    } else {
+      if (parent != nil) {
+        return parent(k);
+      } else {
+        return nil;
+      }
+    }
+  }
+  map = entry;
+}
+
+add("a", 0);
+add(1, 1);
+add(nil, 1);
+add(3, 2);
+print map("a");
+print map(1);
+print map(nil);
+print map(3);
+

@@ -1,0 +1,9 @@
+fun funkcja_a() {
+  print 123;
+}
+
+fun funkcja_b() {
+  return funkcja_a;
+}
+
+funkcja_b()();

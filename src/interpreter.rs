@@ -390,7 +390,7 @@ impl Interpreter {
                 let ret_value = match self.run(&fun.body.statements) {
                     // napotkano Statement::Return podczas wykonywania funkcji
                     Ok(LoxResult::Return(value)) => Ok(value),
-                    // ciało funkcji nie zawierało wyrażenia return, być może inne przypadki
+                    // ciało funkcji nie zawierało instrukcji return, być może inne przypadki
                     Ok(LoxResult::None) => Ok(LoxValue::Nil),
                     // RuntimeError
                     Err(e) => Err(e),
