@@ -1,4 +1,5 @@
-use std::fmt::Formatter;
+use core::fmt;
+use std::{fmt::Formatter, ops::Deref};
 
 use crate::*;
 
@@ -17,7 +18,7 @@ impl std::fmt::Debug for DebugInfo {
             lexeme,
         } = self;
         f.write_fmt(format_args!(
-            "DebugInfo {{ {line}:{position} \"{lexeme}\" }}"
+            "DebugInfo {{ line: {line}, position: {position}, lexeme: \"{lexeme}\" }}"
         ))
     }
 }
@@ -32,7 +33,7 @@ impl From<Token> for DebugInfo {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum BinaryOperator {
     Add(DebugInfo),
     Subtract(DebugInfo),
@@ -44,6 +45,23 @@ pub enum BinaryOperator {
     LessEqual(DebugInfo),
     Greater(DebugInfo),
     GreaterEqual(DebugInfo),
+}
+
+impl fmt::Debug for BinaryOperator {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            BinaryOperator::Add(dbg) => write!(f, "Add({:?})", dbg),
+            BinaryOperator::Subtract(dbg) => write!(f, "Subtract({:?})", dbg),
+            BinaryOperator::Multiply(dbg) => write!(f, "Multiply({:?})", dbg),
+            BinaryOperator::Divide(dbg) => write!(f, "Divide({:?})", dbg),
+            BinaryOperator::Equal(dbg) => write!(f, "Equal({:?})", dbg),
+            BinaryOperator::NotEqual(dbg) => write!(f, "NotEqual({:?})", dbg),
+            BinaryOperator::Less(dbg) => write!(f, "Less({:?})", dbg),
+            BinaryOperator::LessEqual(dbg) => write!(f, "LessEqual({:?})", dbg),
+            BinaryOperator::Greater(dbg) => write!(f, "Greater({:?})", dbg),
+            BinaryOperator::GreaterEqual(dbg) => write!(f, "GreaterEqual({:?})", dbg),
+        }
+    }
 }
 
 impl BinaryOperator {
@@ -80,13 +98,25 @@ pub struct Grouping {
     pub expression: Expression,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum LiteralValue {
     String(String, DebugInfo),
     Number(f64, DebugInfo),
     True(DebugInfo),
     False(DebugInfo),
     Nil(DebugInfo),
+}
+
+impl fmt::Debug for LiteralValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            LiteralValue::String(v, dbg) => write!(f, "String({}, {:?})", v, dbg),
+            LiteralValue::Number(v, dbg) => write!(f, "Number({}, {:?})", v, dbg),
+            LiteralValue::True(dbg) => write!(f, "True({:?})", dbg),
+            LiteralValue::False(dbg) => write!(f, "False({:?})", dbg),
+            LiteralValue::Nil(dbg) => write!(f, "Nil({:?})", dbg),
+        }
+    }
 }
 
 impl LiteralValue {
@@ -111,10 +141,19 @@ pub struct Literal {
     pub value: LiteralValue,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum LogicalOperator {
     And(DebugInfo),
     Or(DebugInfo),
+}
+
+impl fmt::Debug for LogicalOperator {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            LogicalOperator::And(dbg) => write!(f, "And({:?})", dbg),
+            LogicalOperator::Or(dbg) => write!(f, "Or({:?})", dbg),
+        }
+    }
 }
 
 impl LogicalOperator {
@@ -196,7 +235,7 @@ pub struct Call {
     pub args: Vec<Expression>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Expression {
     Binary(Box<Binary>),
     Grouping(Box<Grouping>),
@@ -206,6 +245,21 @@ pub enum Expression {
     Assignment(Box<Assignment>),
     Logical(Box<Logical>),
     Call(Box<Call>),
+}
+
+impl core::fmt::Debug for Expression {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Expression::Binary(e) => fmt::Debug::fmt(e, f),
+            Expression::Grouping(e) => fmt::Debug::fmt(e, f),
+            Expression::Literal(e) => fmt::Debug::fmt(e, f),
+            Expression::Unary(e) => fmt::Debug::fmt(e, f),
+            Expression::Identifier(e) => fmt::Debug::fmt(e, f),
+            Expression::Assignment(e) => fmt::Debug::fmt(e, f),
+            Expression::Logical(e) => fmt::Debug::fmt(e, f),
+            Expression::Call(e) => fmt::Debug::fmt(e, f),
+        }
+    }
 }
 
 impl From<Binary> for Expression {

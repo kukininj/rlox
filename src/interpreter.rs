@@ -53,7 +53,7 @@ impl Interpreter {
             debug_info: DebugInfo {
                 line: 0,
                 position: 0,
-                lexeme: "<native test>".to_owned(),
+                lexeme: "<native identifier>".to_owned(),
             },
         };
 

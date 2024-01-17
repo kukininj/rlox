@@ -33,7 +33,7 @@ fn run(source: String) -> Result<(), Error> {
     // println!("tree: {:#?}", tree);
     let mut interpreter = Interpreter::new();
     let result = interpreter.execute(&program, access_table);
-    println!("result: {:#?}", result);
+    // println!("result: {:#?}", result);
 
     Ok(())
 }
@@ -68,8 +68,8 @@ fn main() {
                     .and_then(|program| Ok((resolve(&program)?, program)))
                     .and_then(|(access_table, program)| interpreter.execute(&program, access_table))
                 {
-                    Ok(result) => {
-                        println!("{:?}", result);
+                    Ok(_result) => {
+                        // println!("{:?}", result);
                     }
                     Err(error) => {
                         println!("{:?}", error);
@@ -91,7 +91,7 @@ fn main() {
                 }
             }
         }
-        [_, flag, path] if *flag == "--print-args" => {
+        [_, flag, path] if *flag == "--print-ast" => {
             let code = fs::read_to_string(path).unwrap();
 
             match print_ast(&code) {

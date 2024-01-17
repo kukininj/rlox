@@ -1,0 +1,20 @@
+fun test_a() {
+  print "test_a";
+  return false;
+}
+fun test_b() {
+  print "test_b";
+  return true;
+}
+fun test_c() {
+  print "test_c";
+  return true;
+}
+fun test_d() {
+  print "test_d";
+  return false;
+}
+fun test_e() {
+  print "test_e";
+  return true;
+}
