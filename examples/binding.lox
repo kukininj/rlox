@@ -1,9 +1,9 @@
-var a = "global";
-{
-    fun local_fun() {
-        print a;
+fun get_closure() {
+    var local = "tajne";
+    fun get_local() {
+        return local;
     }
-    local_fun();
-    var a = "local";
-    local_fun();
+    return get_local;
 }
+
+print get_closure()();

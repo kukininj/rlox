@@ -534,32 +534,38 @@ impl Parser {
     fn primary(&mut self) -> Result<Expression, Error> {
         if let Some(pat) = self.current_token() {
             let token = pat.clone();
-            self.advance()?;
             return match token.token_type {
                 TokenType::False
                 | TokenType::True
                 | TokenType::Nil
                 | TokenType::Number(_)
-                | TokenType::String(_) => Ok(Expression::from(Literal {
-                    value: LiteralValue::new(token)?,
-                })),
-                TokenType::Identifier(name) => Ok(Expression::from(self.create_identifier(
-                    name.clone(),
-                    DebugInfo {
-                        line: token.line,
-                        position: token.position,
-                        lexeme: token.lexeme,
-                    },
-                ))),
+                | TokenType::String(_) => {
+                    self.advance()?;
+                    Ok(Expression::from(Literal {
+                        value: LiteralValue::new(token)?,
+                    }))
+                }
+                TokenType::Identifier(name) => {
+                    self.advance()?;
+                    Ok(Expression::from(self.create_identifier(
+                        name.clone(),
+                        DebugInfo {
+                            line: token.line,
+                            position: token.position,
+                            lexeme: token.lexeme,
+                        },
+                    )))
+                }
                 TokenType::LeftParen => {
+                    self.advance()?;
                     let e = self.expression()?;
                     self.consume(TokenType::RightParen)?;
                     Ok(Expression::from(Grouping { expression: e }))
                 }
-                token => {
+                token_type => {
                     let message = format!(
                         "Expected Literal, Identifier or start of expression, found: {:?}",
-                        token
+                        token_type
                     );
                     Err(self.error(message))
                 }

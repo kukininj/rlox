@@ -1,3 +1,5 @@
+use std::collections::LinkedList;
+
 use crate::{Error, Token, TokenType};
 
 pub fn from_slice<'a, 'b>(
@@ -201,6 +203,11 @@ pub fn scan_tokens(source: &String) -> Result<Vec<Token>, Error> {
         (token, slice_handle) = from_slice(slice_handle, &mut line_number, &mut line_position)?;
         tokens.push(token);
     }
+
+    let (line_number, line_position) = tokens
+        .last()
+        .map(|token| (token.line, token.position))
+        .unwrap_or((1usize, 1usize));
 
     tokens.push(Token {
         token_type: TokenType::Eof,

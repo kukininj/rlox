@@ -1,0 +1,10 @@
+fun get_closure() {
+    fun get_global() {
+        return global;
+    }
+    return get_global;
+}
+
+var global = "wcale nie takie tajne";
+
+print get_closure()();
