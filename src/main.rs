@@ -13,12 +13,10 @@ mod tokens;
 use error::*;
 use tokens::*;
 
-use std::borrow::Borrow;
 use std::env;
 use std::fs;
 use std::io;
 use std::io::Write;
-use std::mem;
 
 use crate::interpreter::Interpreter;
 use crate::parser::Parser;
@@ -32,7 +30,7 @@ fn run(source: String) -> Result<(), Error> {
     let access_table = resolve(&program)?;
     // println!("tree: {:#?}", tree);
     let mut interpreter = Interpreter::new();
-    let result = interpreter.execute(&program, access_table);
+    let _result = interpreter.execute(&program, access_table);
     // println!("result: {:#?}", result);
 
     Ok(())

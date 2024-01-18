@@ -1,5 +1,3 @@
-use crate::lox_value::LoxValue;
-
 #[derive(Debug)]
 pub enum Error {
     SyntaxError {

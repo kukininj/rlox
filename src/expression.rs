@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{fmt::Formatter, ops::Deref};
+use std::fmt::Formatter;
 
 use crate::*;
 

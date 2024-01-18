@@ -1,5 +1,3 @@
-use core::panic;
-
 use crate::environment::Environment;
 use crate::error::Error;
 use crate::expression::Binary;

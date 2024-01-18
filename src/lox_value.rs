@@ -172,7 +172,7 @@ fn comparison_tests() {
     use crate::parser::Parser;
     use crate::resolver;
     use crate::scanner;
-    for (source, expected) in [
+    for (source, _expected) in [
         ("1<2;", true),
         ("1<=2;", true),
         ("1>2;", false),

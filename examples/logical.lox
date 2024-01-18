@@ -1,20 +1,9 @@
-fun test_a() {
-  print "test_a";
-  return false;
+fun f(x) {
+  print x;
+  if (x==1 or x==3 or x==5 or x==7 or x==9) {
+    return false;
+  } else {
+    return true;
+  }
 }
-fun test_b() {
-  print "test_b";
-  return true;
-}
-fun test_c() {
-  print "test_c";
-  return true;
-}
-fun test_d() {
-  print "test_d";
-  return false;
-}
-fun test_e() {
-  print "test_e";
-  return true;
-}
+print (f(1) and f(3) and f(5) or f(6)); 

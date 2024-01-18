@@ -1,12 +1,8 @@
 use core::fmt;
 
 use crate::{
-    environment::FrameId,
-    expression::{Identifier, IdentifierId},
-    interpreter::Interpreter,
-    lox_value::LoxValue,
-    statement::Block,
-    Error,
+    environment::FrameId, expression::Identifier, interpreter::Interpreter, lox_value::LoxValue,
+    statement::Block, Error,
 };
 
 #[derive(PartialEq, Clone, Debug)]

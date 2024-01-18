@@ -1,7 +1,7 @@
 var err = 1 + false;
 print nie_zdefiniowane;
-print -"znaki";
 print -true;
+print "znaki" - "i";
 
 // bledy skladni
 
