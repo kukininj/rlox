@@ -9,7 +9,6 @@ pub enum LoxValue {
     Number(f64),
     Bool(bool),
     String(String),
-    // Object(LoxObject),
     LoxFun(Rc<LoxFun>),
     ForeinFun(Rc<ForeinFun>),
     Nil,

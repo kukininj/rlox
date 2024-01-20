@@ -182,10 +182,10 @@ impl Interpreter {
         args: &Vec<Identifier>,
         body: &Block,
     ) -> Result<(), Error> {
-        let frame_id = self.environment.get_current_frame_id();
+        let frame = self.environment.get_current_frame();
         let lox_function = LoxFun::new(
             name.clone(),
-            frame_id,
+            frame,
             args.clone().into_boxed_slice(),
             body.clone(),
         );
@@ -409,7 +409,7 @@ impl Interpreter {
                     )));
                 }
 
-                self.environment.push_closure(fun.captured_scope);
+                self.environment.push_closure(fun.captured_scope.clone());
                 for (identifier, value) in
                     std::iter::zip(fun.args.into_iter(), arg_values.into_iter())
                 {

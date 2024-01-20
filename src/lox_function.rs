@@ -1,7 +1,7 @@
 use core::fmt;
 
 use crate::{
-    environment::FrameId, expression::Identifier, interpreter::Interpreter, lox_value::LoxValue,
+    environment::FrameRef, expression::Identifier, interpreter::Interpreter, lox_value::LoxValue,
     statement::Block, Error,
 };
 
@@ -39,7 +39,7 @@ pub struct LoxFun {
     pub name: Identifier,
     pub args: Box<[Identifier]>,
     pub body: Block,
-    pub captured_scope: FrameId,
+    pub captured_scope: FrameRef,
 }
 
 impl fmt::Display for LoxFun {
@@ -57,7 +57,7 @@ impl LoxFun {
 impl LoxFun {
     pub(crate) fn new(
         name: Identifier,
-        frame: FrameId,
+        frame: FrameRef,
         args: Box<[Identifier]>,
         body: Block,
     ) -> Self {

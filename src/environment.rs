@@ -1,4 +1,8 @@
+use std::borrow::{Borrow, BorrowMut};
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::ops::{Deref, DerefMut};
+use std::rc::Rc;
 
 use crate::error::Error;
 use crate::expression::{DebugInfo, Identifier, IdentifierId};
@@ -11,35 +15,105 @@ pub struct Variable {
     defined_at: DebugInfo,
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
-pub struct FrameId(u32);
+#[derive(Debug, Clone)]
+pub struct FrameRef(Rc<RefCell<Frame>>);
+impl FrameRef {
+    fn global() -> FrameRef {
+        FrameRef(Rc::new(RefCell::new(Frame {
+            values: HashMap::new(),
+            parent: None,
+        })))
+    }
+
+    fn with_parent(parent: FrameRef) -> FrameRef {
+        FrameRef(Rc::new(RefCell::new(Frame {
+            values: HashMap::new(),
+            parent: Some(parent),
+        })))
+    }
+
+    fn as_frame_ref(&self) -> &RefCell<Frame> {
+        &self.0.as_ref()
+    }
+
+    fn get_parent(&self) -> Option<FrameRef> {
+        self.as_frame_ref().borrow().parent.clone()
+    }
+
+    fn get(&self, name: &String) -> Option<LoxValue> {
+        self.0
+            .as_ref()
+            .borrow()
+            .values
+            .get(name)
+            .map(|v| v.value.clone())
+    }
+
+    fn get_definition_location(&self, name: &String) -> Option<DebugInfo> {
+        self.0
+            .as_ref()
+            .borrow()
+            .values
+            .get(name)
+            .map(|v| v.defined_at.clone())
+    }
+
+    fn assign(&self, name: &String, value: LoxValue) -> Result<(), ()> {
+        let mut frame = self.0.as_ref().borrow_mut();
+        let variable = frame.values.get_mut(name);
+
+        if let Some(variable) = variable {
+            variable.value = value;
+            Ok(())
+        } else {
+            Err(())
+        }
+    }
+}
+
+impl Deref for FrameRef {
+    type Target = Rc<RefCell<Frame>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for FrameRef {
+    fn deref_mut(&mut self) -> &mut Rc<RefCell<Frame>> {
+        &mut self.0
+    }
+}
 
 #[derive(Debug)]
 pub struct Environment {
-    stack: HashMap<FrameId, Frame>,
-    closure_stack: Vec<FrameId>,
+    closure_stack: Vec<FrameRef>,
     pub access_table: AccessTable,
-    head: FrameId,
+    // head: FrameId,
+    head: FrameRef,
+    global: FrameRef,
 }
 
 #[derive(Debug)]
 pub struct Frame {
     values: HashMap<String, Variable>,
-    parent: Option<FrameId>,
+    // parent: Option<FrameId>,
+    parent: Option<FrameRef>,
 }
 
 impl Environment {
     pub fn new() -> Self {
+        let global = FrameRef::global();
         Environment {
-            stack: HashMap::from([(FrameId(0), Frame::new())]),
             closure_stack: Vec::new(),
-            head: FrameId(0),
             access_table: AccessTable::empty(),
+            head: global.clone(),
+            global,
         }
     }
 
-    pub fn get_current_frame_id(&self) -> FrameId {
-        self.head
+    pub fn get_current_frame(&self) -> FrameRef {
+        self.head.clone()
     }
 
     pub fn extend_access_table(&mut self, access_table: AccessTable) -> Result<(), ()> {
@@ -48,25 +122,19 @@ impl Environment {
     }
 
     pub fn push(&mut self) {
-        let parent = self.head;
-        self.head = FrameId(self.stack.len() as u32);
-        self.stack.insert(self.head, Frame::with_parent(parent));
+        let parent = self.head.clone();
+        self.head = FrameRef::with_parent(parent);
     }
 
-    pub fn push_closure(&mut self, frame_id: FrameId) -> FrameId {
-        let parent = self.head;
-        self.head = FrameId(self.stack.len() as u32);
-        self.stack.insert(self.head, Frame::with_parent(frame_id));
+    pub fn push_closure(&mut self, frame: FrameRef) {
+        let parent = self.head.clone();
+        self.head = FrameRef::with_parent(frame);
         self.closure_stack.push(parent);
-
-        parent
     }
 
     pub fn pop(&mut self) {
-        self.head = self
-            .head()
-            .parent
-            .expect("tried to get parent of global scope");
+        let head = self.head.get_parent();
+        self.head = head.expect("tried to get parent of global scope");
     }
 
     pub fn pop_closure(&mut self) {
@@ -76,27 +144,16 @@ impl Environment {
             .expect("tried to pop closure scope, when no closure scope was pushed before");
     }
 
-    fn head(&mut self) -> &mut Frame {
-        self.stack.get_mut(&self.head).unwrap()
-    }
-
-    fn global(&mut self) -> &mut Frame {
-        self.stack.get_mut(&FrameId(0)).unwrap()
-    }
-
-    fn get_nth_scope(&mut self, n: usize) -> &mut Frame {
-        let mut nth_scope = self.head;
+    fn get_nth_scope(&mut self, n: usize) -> FrameRef {
+        let mut nth_scope = self.head.clone();
 
         for _ in 0..n {
-            nth_scope = self
-                .stack
-                .get_mut(&nth_scope)
-                .expect("found invalid scope identifier")
-                .parent
-                .expect("tried to get parent scope of global scope");
+            // dbg!(nth_scope);
+            let tmp = nth_scope.get_parent().clone();
+            nth_scope = tmp.expect("tried to get parent scope of global scope");
         }
 
-        return self.stack.get_mut(&nth_scope).unwrap();
+        return nth_scope;
     }
 
     pub fn define(
@@ -108,10 +165,12 @@ impl Environment {
         }: &Identifier,
         value: LoxValue,
     ) -> Result<(), Error> {
+        let mut frame = self.head.as_frame_ref().borrow_mut();
+
         if let Some(Variable {
             defined_at: DebugInfo { line, position, .. },
             ..
-        }) = self.head().values.get(name)
+        }) = frame.values.get(name)
         {
             Err(Error::RuntimeError {
                 line: debug.line,
@@ -119,7 +178,7 @@ impl Environment {
                 message: format!("Variable {name} already defined at {line}:{position}!"),
             })
         } else {
-            self.head().values.insert(
+            frame.values.insert(
                 name.clone(),
                 Variable {
                     value,
@@ -133,17 +192,29 @@ impl Environment {
     pub fn get(&mut self, name: &String, id: &IdentifierId) -> Option<LoxValue> {
         if let Some(depth) = self.access_table.get(id) {
             self.get_nth_scope(depth.get())
+                .as_frame_ref()
+                .borrow()
                 .values
                 .get(name)
                 .map(|var| var.value.clone())
         } else {
-            self.global().values.get(name).map(|var| var.value.clone())
+            self.global
+                .as_frame_ref()
+                .borrow()
+                .values
+                .get(name)
+                .map(|var| var.value.clone())
         }
     }
 
     #[allow(dead_code)]
     pub fn get_global(&mut self, name: &String) -> Option<LoxValue> {
-        self.global().values.get(name).map(|var| var.value.clone())
+        self.global
+            .as_frame_ref()
+            .borrow()
+            .values
+            .get(name)
+            .map(|var| var.value.clone())
     }
 
     pub fn assign(
@@ -154,6 +225,8 @@ impl Environment {
     ) -> Option<LoxValue> {
         if let Some(depth) = self.access_table.get(id) {
             self.get_nth_scope(depth.get())
+                .as_frame_ref()
+                .borrow_mut()
                 .values
                 .get_mut(target)
                 .map(|var| {
@@ -161,35 +234,16 @@ impl Environment {
                     value
                 })
         } else {
-            self.global().values.get_mut(target).map(|var| {
-                var.value = value.clone();
-                value
-            })
+            self.global
+                .as_frame_ref()
+                .borrow_mut()
+                .values
+                .get_mut(target)
+                .map(|var| {
+                    var.value = value.clone();
+                    value
+                })
         }
-    }
-}
-
-impl Frame {
-    pub fn new() -> Frame {
-        Frame {
-            values: HashMap::new(),
-            parent: None,
-        }
-    }
-
-    pub fn with_parent(parent: FrameId) -> Frame {
-        Frame {
-            values: HashMap::new(),
-            parent: Some(parent),
-        }
-    }
-}
-
-impl Iterator for Frame {
-    type Item = Frame;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        todo!()
     }
 }
 
