@@ -1,5 +1,3 @@
-use std::collections::LinkedList;
-
 use crate::{Error, Token, TokenType};
 
 pub fn from_slice<'a, 'b>(

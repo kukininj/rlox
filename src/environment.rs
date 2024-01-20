@@ -1,4 +1,3 @@
-use std::borrow::{Borrow, BorrowMut};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
@@ -32,12 +31,8 @@ impl FrameRef {
         })))
     }
 
-    fn as_frame_ref(&self) -> &RefCell<Frame> {
-        &self.0.as_ref()
-    }
-
     fn get_parent(&self) -> Option<FrameRef> {
-        self.as_frame_ref().borrow().parent.clone()
+        self.0.as_ref().borrow().parent.clone()
     }
 
     fn get(&self, name: &String) -> Option<LoxValue> {
@@ -49,24 +44,30 @@ impl FrameRef {
             .map(|v| v.value.clone())
     }
 
-    fn get_definition_location(&self, name: &String) -> Option<DebugInfo> {
-        self.0
-            .as_ref()
-            .borrow()
-            .values
-            .get(name)
-            .map(|v| v.defined_at.clone())
-    }
-
-    fn assign(&self, name: &String, value: LoxValue) -> Result<(), ()> {
+    fn assign(&self, name: &String, value: LoxValue) -> Option<LoxValue> {
         let mut frame = self.0.as_ref().borrow_mut();
         let variable = frame.values.get_mut(name);
 
         if let Some(variable) = variable {
             variable.value = value;
-            Ok(())
+            Some(variable.value.clone())
         } else {
-            Err(())
+            None
+        }
+    }
+
+    fn define(&self, name: &String, variable: Variable) -> Result<(), DebugInfo> {
+        let mut frame = self.0.as_ref().borrow_mut();
+
+        if let Some(Variable {
+            value: _,
+            defined_at,
+        }) = frame.values.get(name)
+        {
+            Err(defined_at.clone())
+        } else {
+            frame.values.insert(name.clone(), variable);
+            Ok(())
         }
     }
 }
@@ -100,6 +101,12 @@ pub struct Frame {
     // parent: Option<FrameId>,
     parent: Option<FrameRef>,
 }
+
+// impl Drop for Frame {
+//     fn drop(&mut self) {
+//         dbg!(&self.values);
+//     }
+// }
 
 impl Environment {
     pub fn new() -> Self {
@@ -148,7 +155,6 @@ impl Environment {
         let mut nth_scope = self.head.clone();
 
         for _ in 0..n {
-            // dbg!(nth_scope);
             let tmp = nth_scope.get_parent().clone();
             nth_scope = tmp.expect("tried to get parent scope of global scope");
         }
@@ -165,56 +171,37 @@ impl Environment {
         }: &Identifier,
         value: LoxValue,
     ) -> Result<(), Error> {
-        let mut frame = self.head.as_frame_ref().borrow_mut();
-
-        if let Some(Variable {
-            defined_at: DebugInfo { line, position, .. },
-            ..
-        }) = frame.values.get(name)
-        {
-            Err(Error::RuntimeError {
-                line: debug.line,
-                position: debug.position,
+        match self.head.define(
+            name,
+            Variable {
+                value,
+                defined_at: debug.clone(),
+            },
+        ) {
+            Ok(_) => Ok(()),
+            Err(DebugInfo {
+                line,
+                position,
+                lexeme: _,
+            }) => Err(Error::RuntimeError {
+                line,
+                position,
                 message: format!("Variable {name} already defined at {line}:{position}!"),
-            })
-        } else {
-            frame.values.insert(
-                name.clone(),
-                Variable {
-                    value,
-                    defined_at: debug.clone(),
-                },
-            );
-            Ok(())
+            }),
         }
     }
 
     pub fn get(&mut self, name: &String, id: &IdentifierId) -> Option<LoxValue> {
         if let Some(depth) = self.access_table.get(id) {
-            self.get_nth_scope(depth.get())
-                .as_frame_ref()
-                .borrow()
-                .values
-                .get(name)
-                .map(|var| var.value.clone())
+            self.get_nth_scope(depth.get()).get(name)
         } else {
-            self.global
-                .as_frame_ref()
-                .borrow()
-                .values
-                .get(name)
-                .map(|var| var.value.clone())
+            self.global.get(name)
         }
     }
 
     #[allow(dead_code)]
     pub fn get_global(&mut self, name: &String) -> Option<LoxValue> {
-        self.global
-            .as_frame_ref()
-            .borrow()
-            .values
-            .get(name)
-            .map(|var| var.value.clone())
+        self.global.get(name)
     }
 
     pub fn assign(
@@ -224,25 +211,9 @@ impl Environment {
         value: LoxValue,
     ) -> Option<LoxValue> {
         if let Some(depth) = self.access_table.get(id) {
-            self.get_nth_scope(depth.get())
-                .as_frame_ref()
-                .borrow_mut()
-                .values
-                .get_mut(target)
-                .map(|var| {
-                    var.value = value.clone();
-                    value
-                })
+            self.get_nth_scope(depth.get()).assign(target, value)
         } else {
-            self.global
-                .as_frame_ref()
-                .borrow_mut()
-                .values
-                .get_mut(target)
-                .map(|var| {
-                    var.value = value.clone();
-                    value
-                })
+            self.global.assign(target, value)
         }
     }
 }
